@@ -1,0 +1,225 @@
+/* Bitaxe Cockpit — Polpo OS Textual CSS · sess.2210 — Multi-color Edition */
+
+Screen {
+    background: #0a0a0a;
+    color: #e6e6e6;
+}
+
+/* ──── HEADER HUD — ASCII BIG TITLE + gradient depth + centratura ─── */
+#header-bar {
+    height: 13;
+    background: #0a0805;
+    color: #FFB000;
+    padding: 1 2 1 2;
+    content-align: center middle;
+    text-align: center;
+}
+
+#header-title {
+    width: 1fr;
+}
+
+#header-clock {
+    width: 12;
+    text-align: right;
+    color: #F7931A;
+}
+
+/* ──── MAIN GRID ─────────────────────────────────────────────── */
+/* sess.2214 — VerticalScroll wrapper + grid-rows fisse (18 row per box)
+ * Permette scroll verticale quando window troppo piccola per render full.
+ * Box hanno altezza intrinseca sufficiente per big number + sparkline + gauge + metrics. */
+#main-grid {
+    layout: grid;
+    grid-size: 2 5;
+    grid-columns: 1fr 1fr;
+    grid-rows: auto auto auto auto auto;
+    grid-gutter: 0 1;
+    padding: 1;
+    height: auto;
+}
+
+/* Alerts bar spans 2 columns (full-width) */
+#alerts-bar {
+    column-span: 2;
+}
+
+.panel {
+    padding: 1 2;
+    background: #141414;
+    height: 100%;
+    width: 100%;
+    text-wrap: wrap;
+    overflow-x: hidden;
+}
+
+.panel-title {
+    text-style: bold;
+    padding-bottom: 1;
+}
+
+#alerts-bar {
+    padding: 0 2;
+    text-align: center;
+}
+
+/* ──── COLORI SEMANTICI PER PANEL ─────────────────────────────── */
+
+/* HASHRATE — Orange Bitcoin (sigillo principale) */
+#hashrate-panel {
+    border: solid #F7931A;
+    background: #1a1208;
+}
+
+/* THERMAL — Rosso (calore/temperatura) */
+#thermal-panel {
+    border: solid #FF4444;
+    background: #1a0808;
+}
+
+/* MINING PROGRESS — Gold (treasure/share trovati) */
+#mining-panel {
+    border: solid #FFD700;
+    background: #1a1608;
+}
+
+/* LOTTERY — Magenta (mistero/lotteria) */
+#lottery-panel {
+    border: solid #C77DFF;
+    background: #15081a;
+}
+
+/* POWER — Cyan (elettricità/energia) */
+#power-panel {
+    border: solid #00D9FF;
+    background: #08161a;
+}
+
+/* POOL & WALLET — Green (network/connessione) */
+#pool-panel {
+    border: solid #00C896;
+    background: #081a14;
+}
+
+/* SYSTEM — Blue (data/info) */
+#system-panel {
+    border: solid #4DABF7;
+    background: #08121a;
+}
+
+/* INSIGHT — Yellow (conoscenza/educational, deprecated ma compat) */
+#insight-panel {
+    border: solid #FFEE00;
+    background: #1a1908;
+}
+
+/* LEGEND — Bianco (guida & shortcuts) */
+#legend-panel {
+    border: solid #FFFFFF;
+    background: #141414;
+}
+
+/* ──── HELP MODAL ─────────────────────────────────────────────── */
+HelpModal {
+    align: center middle;
+}
+
+#help-content {
+    width: 80;
+    height: auto;
+    background: #0d0d0d;
+    border: double #F7931A;
+    padding: 1 2;
+    color: #e6e6e6;
+}
+
+/* ──── METRIC COLORS ──────────────────────────────────────────── */
+.metric-label { color: #888888; text-style: italic; }
+.metric-value { color: #e6e6e6; }
+.metric-good { color: #00C896; text-style: bold; }
+.metric-warn { color: #FFB000; text-style: bold; }
+.metric-crit { color: #FF4444; text-style: bold; }
+
+.sparkline { color: #F7931A; background: #0a0a0a; }
+
+/* ──── ALERTS ─────────────────────────────────────────────────── */
+#alerts-bar {
+    height: 1;
+    background: #0a0a0a;
+    color: #FF4444;
+    text-style: bold;
+    padding: 0 2;
+}
+
+#alerts-bar.warning {
+    background: #3a2a00;
+    color: #FFB000;
+}
+
+#alerts-bar.critical {
+    background: #4a0000;
+    color: #FF4444;
+}
+
+#alerts-bar.safe { color: #00C896; }
+
+/* ──── FOOTER ─────────────────────────────────────────────────── */
+#footer-bar {
+    height: 1;
+    background: #1a1a1a;
+    color: #888888;
+    padding: 0 2;
+}
+
+/* sess.2214 — flash visivo on manual refresh (gamification UI/UX `r`) */
+#footer-bar.flash-refresh {
+    background: #F7931A;
+    color: #0a0a0a;
+    text-style: bold;
+}
+
+/* ──── BAR FILLS ──────────────────────────────────────────────── */
+.bar-track { color: #333333; }
+.bar-fill { color: #F7931A; }
+.bar-fill-warn { color: #FFB000; }
+.bar-fill-crit { color: #FF4444; }
+
+/* ──── THEMES (cycle con `t`) ────────────────────────────────── */
+
+/* Bitcoin Pure */
+.theme-bitcoin .panel { border: solid #FFD700; background: #1a1608; }
+.theme-bitcoin .panel-title { color: #FFD700; }
+
+/* Monochrome */
+.theme-mono {
+    background: #0a0a0a;
+}
+.theme-mono .panel { border: solid #888888; background: #141414; }
+.theme-mono .panel-title { color: #ffffff; }
+.theme-mono #hashrate-panel,
+.theme-mono #thermal-panel,
+.theme-mono #mining-panel,
+.theme-mono #lottery-panel,
+.theme-mono #power-panel,
+.theme-mono #pool-panel,
+.theme-mono #system-panel,
+.theme-mono #insight-panel {
+    border: solid #888888;
+    background: #141414;
+}
+
+/* Hacker */
+.theme-hacker { background: #000000; color: #00FF00; }
+.theme-hacker .panel { border: solid #00FF00; background: #001100; }
+.theme-hacker #hashrate-panel,
+.theme-hacker #thermal-panel,
+.theme-hacker #mining-panel,
+.theme-hacker #lottery-panel,
+.theme-hacker #power-panel,
+.theme-hacker #pool-panel,
+.theme-hacker #system-panel,
+.theme-hacker #insight-panel {
+    border: solid #00FF00;
+    background: #001100;
+}
+.theme-hacker .panel-title { color: #00FF00; }
