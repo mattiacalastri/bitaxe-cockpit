@@ -69,7 +69,7 @@ It runs in your terminal. It speaks Italian by default. It looks like a flight d
 
 ![Bitaxe Cockpit live — Hashrate, Temperature, Mining, Lotteria panels](docs/screenshots/cockpit-live-polpo-theme.png)
 
-*Live capture on a Gamma 601 BM1370 — `polpo-bitaxe-001` @ `192.168.1.64` · 1.23 TH/s · 63 °C · 18 W · 3 776 share · 10h uptime 🥉 · solo pool `homeminingitalia.org`. Polpo theme.*
+*Live capture on a Gamma 601 BM1370 · 1.23 TH/s · 63 °C · 18 W · 3 776 share · 10h uptime 🥉 · solo pool `homeminingitalia.org`. Polpo theme.*
 
 What you're looking at, top to bottom:
 
@@ -156,10 +156,10 @@ That's it. If exactly one Bitaxe is on your LAN it auto-selects. If more than on
 ### Other launch modes
 ```bash
 # Explicit host
-bitaxe-cockpit --host 192.168.1.64
+bitaxe-cockpit --host 192.168.1.X
 
 # Custom poll interval
-bitaxe-cockpit --host 192.168.1.64 --interval 2.0
+bitaxe-cockpit --host 192.168.1.X --interval 2.0
 
 # Print discovered devices and exit (no TUI)
 bitaxe-cockpit --list
@@ -170,7 +170,7 @@ uvx --from . bitaxe-cockpit
 
 ### Wallet-safe launch (recommended)
 ```bash
-export BITAXE_HOST=192.168.1.64
+export BITAXE_HOST=192.168.1.X
 export BITAXE_WALLET_PREFIX=bc1qxxxxxxx   # first ~8 chars of YOUR BTC address
 bitaxe-cockpit
 ```

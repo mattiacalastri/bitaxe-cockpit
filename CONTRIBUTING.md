@@ -14,7 +14,7 @@ pip install -e ".[dev]"
 Run against your Bitaxe:
 
 ```bash
-export BITAXE_HOST=192.168.1.64
+export BITAXE_HOST=192.168.1.X
 export BITAXE_WALLET_PREFIX=bc1qxxx
 python bitaxe_cockpit.py
 ```

@@ -882,9 +882,9 @@ class InsightPanel(Static):
         {
             "title": "🪙 Wallet self-custody",
             "body": (
-                "Sparrow Wallet [bold]polpo-os-bitaxe[/]. Chiavi private nel TUO Mac.\n\n"
-                "Master fingerprint: 9e140771\n"
-                "Derivation: m/84'/0'/0' (BIP84 Native SegWit)\n\n"
+                "Sparrow Wallet desktop (canonical Polpo). Chiavi private nel TUO Mac.\n\n"
+                "Derivation: m/84'/0'/0' (BIP84 Native SegWit)\n"
+                "Script type: P2WPKH → address `bc1q...`\n\n"
                 "Se mai vinci un blocco, i 3.325 BTC sono [bold #00C896]davvero tuoi[/]. "
                 "No exchange. No custody. No intermediari."
             )
