@@ -15,7 +15,9 @@
 
 A terminal-native flight deck for [Bitaxe](https://bitaxe.org) solo Bitcoin miners — animated, gamified, Italian-first, and paranoid in all the right places.
 
-![Bitaxe Cockpit — live Polpo theme on a Gamma 601](docs/screenshots/cockpit-live-polpo-theme.png)
+![Bitaxe Cockpit live TUI dashboard — Gamma 601 BM1370 solo Bitcoin miner monitor with animated traveling-wave BITAXE header, hashrate + thermal + share + block-find panels, dark Polpo theme](docs/cockpit-onda-hero.gif)
+
+<sub>*14 s loop · live capture on a Gamma 601 BM1370 ASIC at 1.07 TH/s, hashing solo to `homeminingitalia.org:3333` · animated header travels in real time, all 8 panels reactive on 5 s poll. Full static capture below.*</sub>
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=flat-square)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
@@ -44,6 +46,30 @@ It runs in your terminal. It speaks Italian by default. It looks like a flight d
 
 ---
 
+## ⚡ TL;DR
+
+> **Bitaxe Cockpit** is an open-source terminal dashboard (TUI) for [Bitaxe](https://bitaxe.org) ESP32 solo Bitcoin miners (401, Gamma 601, Ultra 701, BM1370 ASIC). It polls `http://<bitaxe>/api/system/info` every 5 s and renders 8 live panels — hashrate, ASIC + VRM thermal, share quality, solo block-find probability, energy cost (€/day), pool & wallet integrity, system health, and educational tooltips — with mDNS auto-discovery, Telegram / Discord webhook alerts, and an **active wallet-drift check that defends you against the reseller "vendor trap"** where pre-configured Bitaxes mine to the seller's BTC address. One command: `pip install -e . && bitaxe-cockpit --discover`. MIT licensed, single-file Python 3.10+, Italian-first UI with English roadmap, zero telemetry, runs over SSH on a Raspberry Pi.
+
+<!--
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Bitaxe Cockpit",
+  "operatingSystem": "Linux, macOS, Windows (Python 3.10+)",
+  "applicationCategory": "DeveloperApplication",
+  "applicationSubCategory": "Bitcoin Mining Monitor",
+  "description": "Open-source terminal dashboard (TUI) for Bitaxe ESP32 solo Bitcoin miners. Live hashrate, thermal, share quality, solo block-find probability, energy cost, and active wallet-drift detection against the reseller vendor trap.",
+  "softwareVersion": "0.2.0",
+  "license": "https://opensource.org/licenses/MIT",
+  "url": "https://github.com/mattiacalastri/bitaxe-cockpit",
+  "author": { "@type": "Organization", "name": "Polpo OS" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "keywords": "bitaxe, solo bitcoin mining, axeos monitor, bm1370 dashboard, esp32 miner, textual tui, terminal dashboard, vendor wallet trap, mempool.space, homeminingitalia, italian bitcoin"
+}
+-->
+
+---
+
 ## 📑 Table of Contents
 
 - [The cockpit at a glance](#-the-cockpit-at-a-glance)
@@ -67,9 +93,9 @@ It runs in your terminal. It speaks Italian by default. It looks like a flight d
 
 ## 🖼 The Cockpit at a Glance
 
-![Bitaxe Cockpit live — Hashrate, Temperature, Mining, Block Hunt panels](docs/screenshots/cockpit-live-polpo-theme.png)
+![Bitaxe Cockpit live screenshot 2026-05-24 — Bitaxe Gamma 601 BM1370 ASIC at 1.13 TH/s mining solo on homeminingitalia.org, showing animated BITAXE header, LIVE status pill, 4855 accepted shares, 66°C ASIC temp, P(block) calculator and reward estimate](docs/screenshots/cockpit-live-2026-05-24-sess2231.png)
 
-*Live capture on a Gamma 601 BM1370 · 1.23 TH/s · 63 °C · 18 W · 3 776 share · 10h uptime 🥉 · solo pool `homeminingitalia.org`. Polpo theme.*
+*Live capture 2026-05-24 12:34 CEST on a Gamma 601 BM1370 · **1.13 TH/s** · 66 °C ASIC · 75 °C VRM · **4 855 shares accepted, 4 rejected (0.08 % reject ratio)** · 12 h 38 m uptime 🥉 · solo pool `solo.homeminingitalia.org:3333` · Polpo dark theme · post-sess.2231 failure-classifier patch.*
 
 What you're looking at, top to bottom:
 
@@ -85,14 +111,37 @@ More captures (other themes, alert states, vendor-trap warning) coming as the co
 
 ---
 
-## 🛡 Why This Exists — *The Vendor Trap*
+## 🛡 Why Bitaxe Cockpit Exists — *The Vendor Wallet Trap*
 
 A brand-new Bitaxe often arrives **pre-configured with the seller's Bitcoin address** as the active `stratumUser`. Every share you mine. Every block you hit. Goes to **them**.
 
 It's legal. It's documented in tiny print. It's also a quiet way for resellers to subsidize themselves at your expense.
 
+```mermaid
+flowchart TD
+    A([📦 You unbox a new Bitaxe]) --> B[Plug it in · OLED says 'mining']
+    B --> C{Did you check<br/><code>/api/system/info</code><br/>stratumUser?}
+    C -->|"❌ No"| D[("💸 Your sats → reseller<br/>forever<br/>(silent failure)")]
+    C -->|"✅ Yes"| E[See <code>bc1pl5j...BitaxeHMI</code><br/>= vendor wallet]
+    E --> F[PATCH stratumUser<br/>with YOUR address]
+    F --> G{API confirms<br/>new wallet?}
+    G -->|"✅ Yes"| H{WebSocket <code>/api/ws</code><br/>shows YOUR shares?}
+    G -->|"❌ No"| F
+    H -->|"❌ Still vendor"| I[("🚨 AxeOS cache:<br/>API lies, runtime stale")]
+    I --> J[POST <code>/api/system/restart</code>]
+    J --> H
+    H -->|"✅ Yes"| K([🎯 First share to YOUR wallet<br/>verified live])
+
+    classDef trap fill:#3a0000,stroke:#FF4444,color:#FF8888,stroke-width:2px;
+    classDef safe fill:#003300,stroke:#00C896,color:#88FFAA,stroke-width:2px;
+    classDef check fill:#1a1a2e,stroke:#FFD700,color:#FFD700;
+    class D,I trap;
+    class A,K safe;
+    class C,G,H check;
+```
+
 > **This actually happened to the machine that runs this cockpit.**
-> Sess.2210 (May 2026, Bitcare Forum, Brescia): first Bitaxe acquired. Pre-flight `/api/system/info` revealed `stratumUser: bc1pl5j75axs...BitaxeHMI`. PATCH applied with the rightful owner's wallet. API confirmed new wallet. WebSocket stream `/api/ws` revealed: **14 of 14 subsequent shares still flowing to the vendor**.
+> Sess.2210 (2026-05-23, Bitcare Forum, Brescia): first Bitaxe acquired. Pre-flight `/api/system/info` revealed `stratumUser: bc1pl5j75axs...BitaxeHMI`. PATCH applied with the rightful owner's wallet. API confirmed new wallet. WebSocket stream `/api/ws` revealed: **14 of 14 subsequent shares still flowing to the vendor**.
 >
 > AxeOS caches the stratumUser in runtime memory until you POST `/api/system/restart`. The HTTP API lies politely. The WebSocket tells the truth.
 
@@ -301,7 +350,47 @@ Use the cockpit when you want **immediate operator awareness** at the terminal. 
 
 ---
 
-## 🏗 Architecture
+## 🏗 Architecture — Data Flow and Failure Modes
+
+```mermaid
+flowchart LR
+    subgraph LAN[" Your LAN "]
+        BTX[("🔌 Bitaxe<br/>ESP32 + ASIC<br/>AxeOS firmware")]
+    end
+    subgraph Cockpit[" bitaxe-cockpit (your terminal) "]
+        POLL["⚙️ httpx async poll<br/>every 5 s"]
+        STATE["📦 BitaxeState<br/>dataclass<br/>(60-sample history)"]
+        TUI["🖥 Textual App<br/>8 reactive panels<br/>+ animated header"]
+        CSV["💾 history.csv<br/>append-only"]
+        WS["🛡 ws_check.py<br/>vendor-trap defender"]
+        ALERT["📡 Webhook fanout<br/>Telegram · Discord · JSON"]
+    end
+    subgraph Cloud[" Internet (optional, opt-in) "]
+        MP[(("⛓ mempool.space<br/>block height"))]
+        TG[/"📱 Telegram bot"/]
+        DC[/"🎮 Discord webhook"/]
+        WH[/"🌐 Your endpoint"/]
+    end
+
+    BTX -- "GET /api/system/info<br/>(JSON, ~1.7 KB)" --> POLL
+    POLL --> STATE
+    STATE --> TUI
+    STATE --> CSV
+    BTX -. "WebSocket /api/ws<br/>(ground-truth share stream)" .-> WS
+    WS -. "drift detected" .-> ALERT
+    STATE -. "threshold crossed" .-> ALERT
+    MP -. "block height (60 s)" -.-> TUI
+    ALERT --> TG
+    ALERT --> DC
+    ALERT --> WH
+
+    classDef bitaxe fill:#F7931A,stroke:#000,color:#000,stroke-width:2px;
+    classDef cockpit fill:#1a1a2e,stroke:#FFD700,color:#FFD700;
+    classDef cloud fill:#0f0f1a,stroke:#888,color:#aaa;
+    class BTX bitaxe;
+    class POLL,STATE,TUI,CSV,WS,ALERT cockpit;
+    class MP,TG,DC,WH cloud;
+```
 
 ```
 bitaxe-cockpit/
@@ -310,12 +399,31 @@ bitaxe-cockpit/
 ├── bitaxe_ghostty_wrapper.c ← Optional macOS .app launcher (Ghostty fullscreen)
 ├── pyproject.toml           ← Standard PEP-621 project file
 ├── docs/
-│   └── screenshots/         ← SVG renderings
+│   └── screenshots/         ← PNG + SVG renderings
 ├── tests/                   ← Smoke tests + thermal threshold tests
 └── .github/workflows/ci.yml ← Matrix Python 3.10 / 3.11 / 3.12
 ```
 
-The core polls `GET http://<host>/api/system/info` every N seconds, decodes into a `BitaxeState` dataclass, and Textual's reactive watchers update each panel. Manual `r` triggers an out-of-band poll plus gamification tracking. No threads, no asyncio shenanigans beyond Textual's own loop — boring and stable.
+### Failure classification (v0.2.1 — sess.2231)
+
+The cockpit distinguishes **five** failure modes instead of a single OFFLINE — because "Bitaxe down" and "you're on the wrong WiFi" are not the same problem:
+
+| Label (header pill) | Color | Trigger | What you should do |
+| ------------------- | ----- | ------- | ------------------ |
+| `LIVE` | 🟢 green | API responded, JSON valid | Watch sats accumulate |
+| `UNREACHABLE` | 🟡 yellow | Host on different /24 subnet | Reconnect to your home WiFi (hotspot?) |
+| `OFFLINE` | 🔴 red | Connect timeout on same subnet | Check cable, PSU, Bitaxe WiFi config |
+| `DEVICE DOWN` | 🔴 red | TCP RST (ECONNREFUSED) | Bitaxe powered but AxeOS unresponsive — restart |
+| `HTTP ERR` | 🔴 red | 4xx / 5xx from AxeOS | Firmware glitch — reflash or restart |
+| `BAD DATA` | 🔴 red | Non-JSON response | Possible corrupted firmware |
+
+This matters because the **same screen of zeros** can mean five completely different real-world problems. The classifier is the operator's first sanity layer.
+
+### Polling internals
+
+The core polls `GET http://<host>/api/system/info` every N seconds, decodes into a `BitaxeState` dataclass, and Textual's reactive watchers update each panel only when a delta is detected. Manual `r` triggers an out-of-band poll plus gamification tracking (streak, NEW BEST, easter eggs at 21/100/333). The streak counter only increments when the device is **reachable** *and* response time < 60 ms — fail-fast errors no longer falsely "win" a streak (sess.2231 patch).
+
+No threads, no asyncio shenanigans beyond Textual's own loop — boring and stable.
 
 Why a single file? Because you should be able to `wget` it onto a Pi and run it. Modularization only happens when an external contributor asks (it hasn't, yet).
 
@@ -340,6 +448,26 @@ Prefer fiat? ⭐ a star at the top of this page. Discoverability is worth more t
 ---
 
 ## ❓ FAQ
+
+<!--
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type":"Question","name":"What is Bitaxe?","acceptedAnswer":{"@type":"Answer","text":"Bitaxe is an open-source single-ASIC solo Bitcoin miner built around an ESP32 controller and a Bitmain BM1370 (Gamma 601) / BM1366 (Ultra 701) ASIC. It runs the AxeOS firmware and exposes a JSON API at /api/system/info on port 80. It hashes solo against the entire Bitcoin network — the upside is a full block reward (~3.125 BTC + fees) if you win, the downside is statistical insignificance unless thousands of operators run them collectively."}},
+    {"@type":"Question","name":"What does Bitaxe Cockpit do?","acceptedAnswer":{"@type":"Answer","text":"Bitaxe Cockpit is a terminal-native dashboard (TUI) written in Python and Textual that polls a Bitaxe's HTTP API every 5 seconds and renders 8 live panels: hashrate, ASIC + VRM temperature, share quality, solo block-find probability, energy cost, pool & wallet integrity, system health, and a context-aware legend. Its distinctive feature is an active wallet-drift check that detects the 'vendor wallet trap' where resellers ship Bitaxes pre-configured with their own BTC address."}},
+    {"@type":"Question","name":"What is the Bitaxe vendor wallet trap?","acceptedAnswer":{"@type":"Answer","text":"The vendor wallet trap is a practice where Bitaxe resellers ship the device with their own Bitcoin address pre-configured as the stratumUser. Without explicit verification via /api/system/info, the new owner unknowingly mines Bitcoin to the reseller. Even after patching the config via the web UI, AxeOS caches the old stratumUser in runtime memory until a full /api/system/restart — so the HTTP API can show the new wallet while the WebSocket stream still emits shares to the old one. Bitaxe Cockpit defends against this with the BITAXE_WALLET_PREFIX env var and a post-restart verification routine."}},
+    {"@type":"Question","name":"Will Bitaxe Cockpit work with my Bitaxe 401?","acceptedAnswer":{"@type":"Answer","text":"Yes. Any Bitaxe with AxeOS firmware 2.0 or newer that exposes the standard /api/system/info JSON endpoint is supported. Tested live on Bitaxe 401, Gamma 601 (BM1370), and Ultra 701 (BM1366)."}},
+    {"@type":"Question","name":"Does Bitaxe Cockpit collect telemetry?","acceptedAnswer":{"@type":"Answer","text":"No. Zero telemetry. The only outbound HTTP calls are: (1) your Bitaxe on the LAN, (2) mempool.space for Bitcoin block height, (3) the webhook endpoints you explicitly configure. Source code is a single Python file — auditable in one read."}}
+  ]
+}
+-->
+
+**Q: What is Bitaxe?**
+Bitaxe is an open-source single-ASIC solo Bitcoin miner built around an **ESP32** controller and a **Bitmain BM1370** (Gamma 601) or **BM1366** (Ultra 701) ASIC. It runs the [AxeOS firmware](https://github.com/skot/ESP-Miner) and exposes a JSON API at `/api/system/info` on port 80. Each unit hashes **~1 TH/s solo** against the entire Bitcoin network — the upside is a full block reward (~3.125 BTC + fees) if you find one, the downside is statistical insignificance unless thousands of operators run them collectively. Roughly the per-day odds of a single 1 TH/s device hitting a block are `1 / (3.0 × 10⁸)` at current difficulty.
+
+**Q: What does Bitaxe Cockpit actually do?**
+It's a terminal-native dashboard that polls your Bitaxe's HTTP API every 5 s and renders 8 live panels: hashrate, ASIC + VRM thermal, share quality, **solo block-find probability**, energy cost in €, pool & wallet integrity, system health, and an educational legend. Distinctive features: animated wave header, gamified manual refresh, uptime milestone badges, **active wallet-drift defense against the vendor trap**, mDNS auto-discovery, opt-in Telegram/Discord/JSON webhook alerts.
 
 **Q: Will this work with my Bitaxe 401 from 2024?**
 Yes. Any Bitaxe with AxeOS ≥ 2.0 exposing the standard `/api/system/info` endpoint. Tested on 401, Gamma 601, Ultra 701.
