@@ -75,7 +75,9 @@ pytest tests/ -v
 
 ## Code of Conduct
 
-Be civil. The Bitcoin / open-hardware community thrives on respect. Personal attacks, harassment, or sectarian gatekeeping are not welcome. Otherwise — bring your weird ideas. The animated BITAXE wave started as one.
+This project follows the [Contributor Covenant 2.1](CODE_OF_CONDUCT.md), with four project-specific additions (patience with first-time miners, no vendor pile-ons, no financial advice, bilingual respect). Read the full text before opening an issue or PR.
+
+Short version: be civil. The Bitcoin / open-hardware community thrives on respect. Personal attacks, harassment, or sectarian gatekeeping are not welcome. Otherwise — bring your weird ideas. The animated BITAXE wave started as one.
 
 ## Reporting bugs
 
@@ -85,5 +87,9 @@ Open an issue with:
 - macOS / Linux distro
 - Exact reproduction steps
 - Screenshot if visual
+
+## Reporting security vulnerabilities
+
+**Do not open a public issue for security bugs.** See [SECURITY.md](SECURITY.md) for the private disclosure channel (GitHub Private Vulnerability Reporting preferred, email fallback). Response SLA: 72h acknowledgement, 7-day triage.
 
 🐙

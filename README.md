@@ -387,6 +387,8 @@ Have an idea? Open an issue with the label `enhancement`.
 
 PRs welcome and read carefully. See [CONTRIBUTING.md](CONTRIBUTING.md) for the short version (be kind, run `ruff format`, add a test if you touch math, update CHANGELOG.md).
 
+This project follows the [Contributor Covenant 2.1](CODE_OF_CONDUCT.md). For security vulnerabilities, please use the private channel described in [SECURITY.md](SECURITY.md) — **do not open public issues for security bugs**.
+
 **Specifically wanted:**
 - 🌐 English / Spanish / German / Portuguese localization
 - 📊 Prometheus metrics exporter
