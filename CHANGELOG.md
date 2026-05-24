@@ -8,11 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 Planned:
-- mDNS auto-discovery of Bitaxe miners on LAN
-- Webhook alerts (Telegram / Discord / generic POST)
 - Multi-device dashboard (`--hosts ip1,ip2,ip3`)
 - Prometheus `/metrics` HTTP endpoint
 - WebSocket streaming live (`/api/ws`) replacing REST polling
+- Mining diary log book (best diff break log, downtime events, restart history)
+- Localization to English / Spanish / German
+
+## [0.2.0] — 2026-05-24
+
+### Added
+- **mDNS auto-discovery** of Bitaxe miners on LAN via `zeroconf`
+  - `--discover` flag forces interactive selection
+  - `--list` flag prints found miners + exits
+  - Auto-runs when no `--host` and no `BITAXE_HOST` env var
+  - Filters service names containing `bitaxe` / `axe` / `esp32`
+- **Webhook alerts** (`WebhookNotifier`) — async fire-and-forget push to:
+  - Telegram bot (`BITAXE_TG_TOKEN` + `BITAXE_TG_CHAT_ID`)
+  - Discord webhook (`BITAXE_DISCORD_URL`)
+  - Generic JSON POST (`BITAXE_WEBHOOK_URL`)
+- **Alert events**: ASIC > 70°C, VRM > 80°C, overheat firmware mode, Bitaxe unreachable (3 consecutive failures), new lifetime best diff, uptime milestones (1h/24h/7d/30d)
+- Per-event cooldown (default 5–15 min) prevents spam
+- Optional `[discovery]` install extra for users wanting mDNS
+
+### Changed
+- `zeroconf` is now an **optional** dependency — graceful import error if missing
+- `pyproject.toml` adds `[project.optional-dependencies] discovery` and `all`
 
 ## [0.1.0] — 2026-05-24
 

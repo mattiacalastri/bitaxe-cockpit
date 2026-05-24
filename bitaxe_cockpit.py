@@ -154,6 +154,95 @@ class BitaxeState:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Webhook Notifier (sess.2214 — alert push)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class WebhookNotifier:
+    """Async fire-and-forget alert push to Telegram, Discord, generic POST.
+
+    Configured via environment variables (opt-in, all unset = no-op):
+      BITAXE_TG_TOKEN + BITAXE_TG_CHAT_ID  → Telegram bot
+      BITAXE_DISCORD_URL                   → Discord webhook URL
+      BITAXE_WEBHOOK_URL                   → Generic POST JSON
+
+    Anti-spam: per-event cooldown (default 5min).
+    """
+
+    DEFAULT_COOLDOWN_SEC = 300
+
+    def __init__(self):
+        self.tg_token = os.environ.get("BITAXE_TG_TOKEN", "")
+        self.tg_chat_id = os.environ.get("BITAXE_TG_CHAT_ID", "")
+        self.discord_url = os.environ.get("BITAXE_DISCORD_URL", "")
+        self.webhook_url = os.environ.get("BITAXE_WEBHOOK_URL", "")
+        self._last_fired: dict[str, float] = {}
+        self._client = None
+
+    def is_configured(self) -> bool:
+        return bool(self.tg_token and self.tg_chat_id) or bool(self.discord_url) or bool(self.webhook_url)
+
+    def _can_fire(self, event_key: str, cooldown: float = DEFAULT_COOLDOWN_SEC) -> bool:
+        now = time.time()
+        last = self._last_fired.get(event_key, 0)
+        if now - last < cooldown:
+            return False
+        self._last_fired[event_key] = now
+        return True
+
+    async def _client_get(self):
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=5.0)
+        return self._client
+
+    async def fire(self, event_key: str, title: str, message: str, severity: str = "info", cooldown: float = DEFAULT_COOLDOWN_SEC):
+        """Send alert to all configured channels. Silent on per-channel failure."""
+        if not self.is_configured():
+            return
+        if not self._can_fire(event_key, cooldown):
+            return
+        client = await self._client_get()
+        emoji = {"info": "🐙", "warn": "⚠️", "crit": "🚨"}.get(severity, "🔔")
+        full_msg = f"{emoji} *{title}*\n{message}"
+
+        # Telegram
+        if self.tg_token and self.tg_chat_id:
+            try:
+                await client.post(
+                    f"https://api.telegram.org/bot{self.tg_token}/sendMessage",
+                    json={"chat_id": self.tg_chat_id, "text": full_msg, "parse_mode": "Markdown"},
+                )
+            except Exception:
+                pass
+
+        # Discord
+        if self.discord_url:
+            try:
+                color = {"info": 0xF7931A, "warn": 0xFFB000, "crit": 0xFF4444}.get(severity, 0x888888)
+                await client.post(self.discord_url, json={
+                    "embeds": [{"title": f"{emoji} {title}", "description": message, "color": color}]
+                })
+            except Exception:
+                pass
+
+        # Generic JSON POST
+        if self.webhook_url:
+            try:
+                await client.post(self.webhook_url, json={
+                    "event": event_key,
+                    "severity": severity,
+                    "title": title,
+                    "message": message,
+                    "ts": time.time(),
+                })
+            except Exception:
+                pass
+
+    async def close(self):
+        if self._client is not None:
+            await self._client.aclose()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -1289,6 +1378,10 @@ class BitaxeCockpit(App):
         self.refresh_interval = interval
         self.client = httpx.AsyncClient(timeout=4.0)
         self._timer = None
+        # sess.2214 v0.2 — webhook alerts + prev state per delta detection
+        self.notifier = WebhookNotifier()
+        self._prev_state: Optional[BitaxeState] = None
+        self._unreachable_streak: int = 0
 
     def compose(self) -> ComposeResult:
         # Header live HUD-style (2 righe: branding + KPI primari + tip rotante)
@@ -1327,6 +1420,7 @@ class BitaxeCockpit(App):
         await self.fetch_and_update()
 
     async def fetch_and_update(self):
+        state: Optional[BitaxeState] = None
         try:
             t0 = time.perf_counter()
             r = await self.client.get(f"http://{self.host}/api/system/info")
@@ -1343,12 +1437,70 @@ class BitaxeCockpit(App):
             ts = datetime.now().strftime("%H:%M:%S")
             pause_marker = " [PAUSA]" if self.paused else ""
             self.last_status = f"aggiornato {ts} · {elapsed_ms:.0f}ms{pause_marker}"
+            self._unreachable_streak = 0
         except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError) as e:
             ts = datetime.now().strftime("%H:%M:%S")
             self.last_status = f"⚠ {ts} {type(e).__name__}"
-            empty_state = BitaxeState(reachable=False, last_update=datetime.now())
-            self.update_all_panels(empty_state)
+            state = BitaxeState(reachable=False, last_update=datetime.now())
+            self.update_all_panels(state)
+            self._unreachable_streak += 1
+        # Webhook alerts (sess.2214 v0.2) — fire async post-update
+        if self.notifier.is_configured() and state is not None:
+            await self._maybe_alert(state, self._prev_state)
+        self._prev_state = state
         self.update_footer()
+
+    async def _maybe_alert(self, state: BitaxeState, prev: Optional[BitaxeState]):
+        """Threshold-based alert firing. Cooldown per event in WebhookNotifier."""
+        hn = state.hostname or self.host
+        # Reachability — fire only after 3 consecutive failures (avoid blips)
+        if not state.reachable and self._unreachable_streak == 3:
+            await self.notifier.fire(
+                "unreachable", "Bitaxe non raggiungibile",
+                f"API {self.host} non risponde da 3 poll consecutivi.",
+                severity="crit", cooldown=600,
+            )
+            return  # don't fire other alerts on offline state
+        if not state.reachable:
+            return
+        # ASIC critical
+        if state.temp_asic > 70:
+            await self.notifier.fire(
+                "asic_temp_crit", "ASIC sopra soglia critica",
+                f"{hn} · ASIC {state.temp_asic:.1f}°C (throttle imminente sopra 70°C).",
+                severity="crit", cooldown=600,
+            )
+        # VRM critical
+        if state.temp_vrm > 80:
+            await self.notifier.fire(
+                "vrm_temp_crit", "VRM sopra soglia critica",
+                f"{hn} · VRM {state.temp_vrm:.1f}°C — il VRM è il vero collo di bottiglia.",
+                severity="crit", cooldown=600,
+            )
+        # Overheat mode firmware
+        if state.overheat_mode:
+            await self.notifier.fire(
+                "overheat_mode", "Modalità surriscaldamento attiva",
+                f"{hn} ha attivato il throttle termico. Verifica raffreddamento.",
+                severity="crit", cooldown=900,
+            )
+        # New lifetime best diff
+        if prev and prev.best_diff and state.best_diff != prev.best_diff:
+            await self.notifier.fire(
+                "best_diff_break", "🎰 Nuovo Best Diff lifetime!",
+                f"{hn} · {prev.best_diff} → {state.best_diff}. Più vicino al blocco.",
+                severity="info", cooldown=60,
+            )
+        # Uptime milestones (1h, 24h, 7d, 30d)
+        if prev:
+            milestones = [(3600, "1 ora"), (86400, "24 ore"), (7 * 86400, "7 giorni"), (30 * 86400, "30 giorni")]
+            for sec, label in milestones:
+                if prev.uptime_sec < sec <= state.uptime_sec:
+                    await self.notifier.fire(
+                        f"uptime_milestone_{sec}", f"🏆 Uptime milestone — {label}",
+                        f"{hn} ha raggiunto {label} di uptime continuo.",
+                        severity="info", cooldown=60,
+                    )
 
     def update_all_panels(self, state: BitaxeState, full: bool = True):
         # Adaptive rate sess.2214:
@@ -1562,18 +1714,113 @@ class BitaxeCockpit(App):
 
     async def on_unmount(self):
         await self.client.aclose()
+        await self.notifier.close()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ──────────────────────────────────────────────────────────────────────────────
 
+async def discover_bitaxe(timeout: float = 3.0) -> list[tuple[str, str, int]]:
+    """Scan LAN via mDNS for Bitaxe miners exposing `_http._tcp.local.`.
+
+    Returns list of (hostname, ip, port). Empty if no devices found.
+    Requires `zeroconf` package — graceful fallback if missing.
+    """
+    try:
+        from zeroconf import IPVersion
+        from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
+    except ImportError:
+        print("[bitaxe-cockpit] mDNS discovery requires `zeroconf`. Install with: pip install zeroconf", flush=True)
+        return []
+
+    found: list[tuple[str, str, int]] = []
+    seen_names: set[str] = set()
+
+    aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
+
+    async def _resolve(zc, type_, name):
+        if name in seen_names:
+            return
+        seen_names.add(name)
+        info = AsyncServiceInfo(type_, name)
+        await info.async_request(zc, 1500)
+        if not info.addresses:
+            return
+        # Filter: bitaxe / axe / esp32-* in service name → likely a miner
+        lname = name.lower()
+        if not any(k in lname for k in ("bitaxe", "axe", "esp32")):
+            return
+        ip = ".".join(str(b) for b in info.addresses[0])
+        hostname = info.server.rstrip(".") if info.server else name
+        found.append((hostname, ip, info.port or 80))
+
+    def _handler(zeroconf, service_type, name, state_change):
+        if state_change.name == "Added":
+            asyncio.ensure_future(_resolve(zeroconf, service_type, name))
+
+    browser = AsyncServiceBrowser(
+        aiozc.zeroconf,
+        "_http._tcp.local.",
+        handlers=[_handler],
+    )
+    try:
+        await asyncio.sleep(timeout)
+    finally:
+        await browser.async_cancel()
+        await aiozc.async_close()
+    return found
+
+
+def _select_host_interactive() -> str:
+    """Run mDNS scan + show interactive selection. Returns chosen host."""
+    print("🔍 Scansione mDNS in corso (3s)...", flush=True)
+    found = asyncio.run(discover_bitaxe(timeout=3.0))
+    if not found:
+        print("⚠ Nessun Bitaxe trovato via mDNS. Uso default:", DEFAULT_HOST, flush=True)
+        return DEFAULT_HOST
+    if len(found) == 1:
+        hn, ip, port = found[0]
+        print(f"✓ Trovato 1 miner: {hn} → {ip}:{port}", flush=True)
+        return ip
+    print(f"✓ Trovati {len(found)} miner:", flush=True)
+    for i, (hn, ip, port) in enumerate(found, 1):
+        print(f"  [{i}] {hn} → {ip}:{port}", flush=True)
+    try:
+        choice = input("Scegli numero (default 1): ").strip() or "1"
+        idx = int(choice) - 1
+        return found[idx][1]
+    except (ValueError, IndexError, EOFError, KeyboardInterrupt):
+        return found[0][1]
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Bitaxe Polpo OS Cockpit TUI")
-    parser.add_argument("--host", default=DEFAULT_HOST, help="Bitaxe IP or hostname")
-    parser.add_argument("--interval", type=float, default=DEFAULT_REFRESH_SEC, help="Refresh interval seconds")
+    parser = argparse.ArgumentParser(description="Bitaxe Cockpit — live TUI for solo Bitcoin miners")
+    parser.add_argument("--host", default=None, help="Bitaxe IP or hostname (env BITAXE_HOST or auto-discover if unset)")
+    parser.add_argument("--interval", type=float, default=DEFAULT_REFRESH_SEC, help="Refresh interval seconds (env BITAXE_REFRESH_SEC)")
+    parser.add_argument("--discover", action="store_true", help="Force mDNS auto-discovery + interactive selection (ignore --host)")
+    parser.add_argument("--list", action="store_true", help="Scan LAN via mDNS and list found miners (no TUI)")
     args = parser.parse_args()
-    app = BitaxeCockpit(host=args.host, interval=args.interval)
+
+    if args.list:
+        found = asyncio.run(discover_bitaxe(timeout=3.0))
+        if not found:
+            print("Nessun miner trovato.")
+            return
+        for hn, ip, port in found:
+            print(f"{hn}\t{ip}\t{port}")
+        return
+
+    if args.discover or args.host is None:
+        # Auto-discover when --discover OR --host not specified and env BITAXE_HOST not set
+        if args.discover or os.environ.get("BITAXE_HOST") is None:
+            host = _select_host_interactive()
+        else:
+            host = DEFAULT_HOST
+    else:
+        host = args.host
+
+    app = BitaxeCockpit(host=host, interval=args.interval)
     app.run()
 
 

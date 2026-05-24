@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bitaxe-cockpit"
-version = "0.1.0"
+version = "0.2.0"
 description = "A live TUI cockpit for Bitaxe solo Bitcoin miners — Italian-first, dark theme, gamified, animated ASCII title."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -45,10 +45,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+discovery = [
+    "zeroconf>=0.131",
+]
+all = [
+    "zeroconf>=0.131",
+]
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.23",
     "ruff>=0.5",
+    "zeroconf>=0.131",
 ]
 
 [project.urls]

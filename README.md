@@ -129,6 +129,47 @@ Wallet  VENDOR ❌
 | 📡 Sistema         | Blue    | Hostname, MAC, RSSI sparkline, firmware, heap, uptime   |
 | 📘 Legenda         | White   | Keybindings, thresholds, quick reference                |
 
+## 🔍 mDNS Auto-Discovery (v0.2.0+)
+
+If you don't know your Bitaxe IP, just run:
+
+```bash
+pip install "bitaxe-cockpit[discovery]"     # adds zeroconf dep
+bitaxe-cockpit --discover                    # interactive picker
+bitaxe-cockpit --list                        # print + exit (no TUI)
+```
+
+The discovery scans `_http._tcp.local.` for 3 seconds and matches services with `bitaxe` / `axe` / `esp32` in the name. If exactly one is found, it's auto-selected. If multiple, an interactive prompt asks which one.
+
+## 🔔 Webhook Alerts (v0.2.0+)
+
+Opt-in async push notifications when thresholds are crossed. Configure via env vars:
+
+```bash
+# Telegram bot (create via @BotFather)
+export BITAXE_TG_TOKEN="123456:ABC..."
+export BITAXE_TG_CHAT_ID="987654"
+
+# Discord (channel → Edit Channel → Integrations → Webhooks → New)
+export BITAXE_DISCORD_URL="https://discord.com/api/webhooks/..."
+
+# Generic JSON POST (your own server)
+export BITAXE_WEBHOOK_URL="https://your-server.example.com/bitaxe-alerts"
+```
+
+Events fired (per-event 5-15 min cooldown, no spam):
+
+| Event                           | Severity | Trigger                                  |
+| ------------------------------- | -------- | ---------------------------------------- |
+| `asic_temp_crit`                | crit     | ASIC > 70°C (throttle imminent)          |
+| `vrm_temp_crit`                 | crit     | VRM > 80°C                               |
+| `overheat_mode`                 | crit     | Firmware overheat throttle engaged       |
+| `unreachable`                   | crit     | API silent 3 consecutive polls           |
+| `best_diff_break`               | info     | New lifetime best difficulty             |
+| `uptime_milestone_{3600,...}`   | info     | Crossed 1h / 24h / 7g / 30g uptime       |
+
+Generic webhook receives JSON: `{event, severity, title, message, ts}`.
+
 ## 🔧 Configuration
 
 ### Environment variables
@@ -137,7 +178,11 @@ Wallet  VENDOR ❌
 | ------------------------- | -------------------- | ------------------------------------ |
 | `BITAXE_HOST`             | `bitaxe.local`       | Bitaxe IP or mDNS hostname           |
 | `BITAXE_REFRESH_SEC`      | `5.0`                | Poll interval in seconds             |
-| `BITAXE_WALLET_PREFIX`    | (empty)              | First ~8 chars of your BTC address  |
+| `BITAXE_WALLET_PREFIX`    | (empty)              | First ~8 chars of your BTC address   |
+| `BITAXE_TG_TOKEN`         | (empty)              | Telegram bot token (alerts opt-in)   |
+| `BITAXE_TG_CHAT_ID`       | (empty)              | Telegram chat/channel ID for alerts  |
+| `BITAXE_DISCORD_URL`      | (empty)              | Discord webhook URL for alerts       |
+| `BITAXE_WEBHOOK_URL`      | (empty)              | Generic POST endpoint for alerts     |
 
 ### Data storage
 
