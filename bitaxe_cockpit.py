@@ -15,20 +15,17 @@ import json
 import os
 import time
 import webbrowser
-from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import httpx
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical, VerticalScroll
+from textual.containers import VerticalScroll
 from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widgets import Static
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Configuration
@@ -99,11 +96,11 @@ class BitaxeState:
     overheat_mode: int = 0
     overclock_enabled: int = 0
     response_time_ms: float = 0.0
-    last_update: Optional[datetime] = None
+    last_update: datetime | None = None
     reachable: bool = True
 
     @classmethod
-    def from_api(cls, d: dict, response_ms: float) -> "BitaxeState":
+    def from_api(cls, d: dict, response_ms: float) -> BitaxeState:
         return cls(
             hashrate_ghs=float(d.get("hashRate", 0)),
             expected_ghs=float(d.get("expectedHashrate", 0)),
@@ -337,7 +334,7 @@ _WRAP_W = 78  # soft-wrap width per EXPLAIN tooltip (panel content area ~80 col)
 
 EXPLAIN_HASHRATE = soft_wrap(
     "[dim]💡 [italic]L'hashrate misura quanti tentativi SHA-256 al secondo fa l'ASIC. "
-    "1 TH/s = 1 trilione di hash al secondo. Più hashrate = più biglietti della lotteria "
+    "1 TH/s = 1 trilione di hash al secondo. Più hashrate = più tentativi per il blocco "
     "per trovare il prossimo blocco.[/][/]", _WRAP_W
 )
 EXPLAIN_THERMAL = soft_wrap(
@@ -351,7 +348,7 @@ EXPLAIN_MINING = soft_wrap(
     "difficoltà network → blocco trovato, reward completo al tuo wallet.[/][/]", _WRAP_W
 )
 EXPLAIN_LOTTERY = soft_wrap(
-    "[dim]💡 [italic]Solo mining = lotteria pura. La probabilità segue la tua quota di "
+    "[dim]💡 [italic]Solo mining = probabilità statistica pura. La probabilità segue la tua quota di "
     "hashrate vs hashrate totale network (~600 EH/s). Reward = 3.125 BTC subsidy + "
     "~0.2 BTC di fee per blocco trovato. Alta varianza, vittorie reali ma rare.[/][/]", _WRAP_W
 )
@@ -374,7 +371,7 @@ EXPLAIN_SYSTEM = soft_wrap(
 
 class HashratePanel(Static):
     """⚡ Hashrate panel — Orange palette + big number + sparkline 60s"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    state: reactive[BitaxeState | None] = reactive(None)
     history: list[float] = []
 
     def __init__(self, **kw):
@@ -419,7 +416,7 @@ class HashratePanel(Static):
 
 class ThermalPanel(Static):
     """🌡️ Thermal panel — Red palette + dual sparkline ASIC + VRM"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    state: reactive[BitaxeState | None] = reactive(None)
     asic_history: list[float] = []
     vrm_history: list[float] = []
 
@@ -469,7 +466,7 @@ class ThermalPanel(Static):
 
 class MiningProgressPanel(Static):
     """⛏️ Mining shares — Gold palette + share rate sparkline"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    state: reactive[BitaxeState | None] = reactive(None)
     shares_history: list[int] = []  # absolute shares_accepted over time
 
     def __init__(self, **kw):
@@ -531,8 +528,8 @@ class MiningProgressPanel(Static):
 
 
 class LotteryPanel(Static):
-    """🎰 Lottery — Magenta palette + block probability + reward"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    """🎯 Block Hunt — Magenta palette + block probability + reward"""
+    state: reactive[BitaxeState | None] = reactive(None)
     best_diff_history: list[float] = []  # best_diff in GH over time
 
     def __init__(self, **kw):
@@ -572,13 +569,13 @@ class LotteryPanel(Static):
         # 1 in N lottery scale
         lottery_scale = 1 / (prob_day / 100) if prob_day > 0 else float('inf')
         content = (
-            "[bold #C77DFF]🎰 LOTTERIA — CACCIA AL BLOCCO[/]\n"
+            "[bold #C77DFF]🎯 CACCIA AL BLOCCO[/]\n"
             "[dim italic #D8A5FF]Probabilità solo mining · stima reward blocco[/]\n\n"
             f"  Quota network  [dim]{share:.2e}[/]\n"
             f"  vs 600 EH/s globale\n\n"
             f"  P(blocco)/gg  [#C77DFF]{prob_day:.6f}%[/]\n"
             f"  ETA atteso    [#C77DFF]{eta_str}[/]\n"
-            f"  Lotteria 1 su [#C77DFF]{lottery_scale:.2e}[/] biglietti/giorno\n\n"
+            f"  Probabilità 1 su [#C77DFF]{lottery_scale:.2e}[/] tentativi/giorno\n\n"
             f"  Reward vittoria [bold #FFD700]~{block_reward_btc} BTC[/]\n"
             f"  Eq. EUR         [bold #FFD700]{block_reward_btc * btc_eur:>8,.0f}€[/]\n\n"
             f"  [#C77DFF]  {spark}[/] [dim]Δ miglior sessione[/]\n\n"
@@ -603,7 +600,7 @@ class LotteryPanel(Static):
 
 class PowerPanel(Static):
     """🔋 Power — Cyan palette + sparkline watts + frequency profile"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    state: reactive[BitaxeState | None] = reactive(None)
     power_history: list[float] = []
 
     def __init__(self, **kw):
@@ -666,7 +663,7 @@ class PowerPanel(Static):
 
 class PoolWalletPanel(Static):
     """🏊 Pool primary/fallback + wallet integrity + latency sparkline"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    state: reactive[BitaxeState | None] = reactive(None)
     initial_wallet: str = ""
     latency_history: list[float] = []
 
@@ -721,7 +718,7 @@ class PoolWalletPanel(Static):
 
 class SystemInfoPanel(Static):
     """📡 System — Blue palette + RSSI sparkline + firmware info"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    state: reactive[BitaxeState | None] = reactive(None)
     rssi_history: list[float] = []
 
     def __init__(self, **kw):
@@ -764,7 +761,7 @@ class SystemInfoPanel(Static):
 
 class InsightPanel(Static):
     """🧠 Pannello educativo Polpo — rotation insight didattici in italiano"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    state: reactive[BitaxeState | None] = reactive(None)
     insight_idx: reactive[int] = reactive(0)
 
     INSIGHTS_TEMPLATES = [
@@ -772,7 +769,7 @@ class InsightPanel(Static):
             "title": "⚡ Cos'è l'hashrate",
             "body": (
                 "Hashrate = quanti tentativi al secondo il chip prova "
-                "per indovinare la prossima 'lotteria Bitcoin'.\n\n"
+                "per indovinare la prossima 'ricerca del blocco Bitcoin'.\n\n"
                 "Il tuo Bitaxe fa [bold #F7931A]{hr_th:.2f} TH/s[/] — un trilione "
                 "di calcoli SHA-256 ogni singolo secondo. Sotto al tuo tetto."
             )
@@ -815,9 +812,9 @@ class InsightPanel(Static):
             )
         },
         {
-            "title": "🎰 Perché Solo Mining",
+            "title": "🎯 Perché Solo Mining",
             "body": (
-                "[bold]Solo Mining[/] = lotteria pura. Se trovi un blocco "
+                "[bold]Solo Mining[/] = probabilità pura. Se trovi un blocco "
                 "(raro), [bold #FFD700]3.125 BTC[/] arrivano dritti al tuo wallet.\n\n"
                 "[bold]Pool FPPS[/] = paga centesimi al giorno ma steady.\n\n"
                 "Hai scelto la sovranità invece dei centesimi."
@@ -842,7 +839,7 @@ class InsightPanel(Static):
             )
         },
         {
-            "title": "📊 Lottery variance",
+            "title": "📊 Variance statistica",
             "body": (
                 "Statistica dice: probabilità ~1 blocco ogni 10.000+ anni "
                 "con la tua hashrate vs network.\n\n"
@@ -890,12 +887,12 @@ class InsightPanel(Static):
             )
         },
         {
-            "title": "⏱️ Uptime = lottery time",
+            "title": "⏱️ Uptime = block-hunt time",
             "body": (
                 "Uptime attuale: [bold #F7931A]{uptime}[/].\n\n"
                 "Più gira, più share invia, più piccola la probabilità "
                 "che il prossimo nonce sia quello vincente.\n\n"
-                "Spegnerlo = pausa lotteria. Lascialo acceso 24/7."
+                "Spegnerlo = pausa ricerca. Lascialo acceso 24/7."
             )
         },
         {
@@ -978,7 +975,7 @@ class InsightPanel(Static):
 
 class OLEDMirrorPanel(Static):
     """🖥️ Specchio display OLED Bitaxe — simula schermate AxeOS in tempo reale"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    state: reactive[BitaxeState | None] = reactive(None)
     screen_idx: reactive[int] = reactive(0)
 
     def __init__(self, **kw):
@@ -1009,7 +1006,7 @@ class OLEDMirrorPanel(Static):
         screens = [
             (f"  {s.hostname[:18]:<18}", f"  IP {(getattr(s, 'host_ip', None) or DEFAULT_HOST):<14}"),
             (f"  Hash {s.hashrate_ghs/1000:>5.2f} TH/s", f"  Temp {s.temp_asic:>5.1f} C"),
-            (f"  Best {s.best_diff:<13}", f"  Pool homeminingit"),
+            (f"  Best {s.best_diff:<13}", "  Pool homeminingit"),
             (f"  Up {fmt_uptime(s.uptime_sec):<14}", f"  ✓ {s.shares_accepted}  ✗ {s.shares_rejected}"),
         ]
         line1, line2 = screens[self.screen_idx]
@@ -1030,7 +1027,7 @@ class OLEDMirrorPanel(Static):
 
 class LegendPanel(Static):
     """📘 Legenda — panel statico con shortcuts + soglie + info utili"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    state: reactive[BitaxeState | None] = reactive(None)
 
     def __init__(self, **kw):
         super().__init__(expand=True, **kw)
@@ -1058,30 +1055,30 @@ class LegendPanel(Static):
             "[bold #00C896]🔗 Link rapidi:[/]\n"
             f"  [dim]http://{DEFAULT_HOST}{' ' * max(0, 21 - len(DEFAULT_HOST))} ← dashboard web AxeOS[/]\n"
             "  [dim]premi `o` per aprirla nel browser[/]\n\n"
-            "[dim italic]💡 Tieni il miner acceso 24/7. Ogni hash è un biglietto della lotteria SHA-256.[/]"
+            "[dim italic]💡 Tieni il miner acceso 24/7. Ogni hash è un biglietto della ricerca SHA-256.[/]"
         )
         self.update(content)
 
 
 class HeaderBar(Static):
     """🐙 Header live — KPI primari sempre visibili in 2 righe"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    state: reactive[BitaxeState | None] = reactive(None)
     host: str = DEFAULT_HOST
 
     EDUCATIONAL_TIPS = [
         "💡 Hashrate sopra l'atteso = silicio performante",
         "💡 ASIC <65°C = sicuro per 24/7 sostenuto",
         "💡 J/TH sotto 15 = efficienza industriale",
-        "💡 Più share inviati = più biglietti della lotteria",
+        "💡 Più share inviati = più tentativi per il blocco",
         "💡 Best diff = quanto vicino sei stato a trovare un blocco",
         "💡 Latenza pool <100ms = stratum in salute",
         "💡 Check integrità wallet protegge dal tampering",
         "💡 RSSI > -60dBm = segnale WiFi eccellente",
         "💡 Ventola AUTO = il firmware PID controlla il raffreddamento",
-        "💡 Solo mining = lotteria, reward completo se vinci",
+        "💡 Solo mining = probabilità statistica, reward completo se vinci",
         "💡 1 biglietto su N al giorno — la varianza è tua amica",
         "💡 ESP32-S3 supporta solo WiFi 2.4 GHz",
-        "💡 Ogni hash è un biglietto della lotteria SHA-256",
+        "💡 Ogni hash è un biglietto della ricerca SHA-256",
         "💡 Premi `?` per la guida completa",
         "💡 Premi `t` per ciclare i temi",
         "💡 Premi `o` per aprire la dashboard web AxeOS",
@@ -1213,10 +1210,14 @@ class HeaderBar(Static):
         mini_spark = sparkline(self._hashrate_history, width=10) if self._hashrate_history else ""
         # Uptime milestone badge — pietra miliare visivo
         def _uptime_badge(secs: int) -> str:
-            if secs >= 30 * 86400: return "  [bold #FFD700]🏆 30g+[/]"
-            if secs >= 7 * 86400: return "  [bold #FFB000]🥇 7g+[/]"
-            if secs >= 86400: return "  [bold #F7931A]🥈 24h+[/]"
-            if secs >= 3600: return "  [bold #D27510]🥉 1h+[/]"
+            if secs >= 30 * 86400:
+                return "  [bold #FFD700]🏆 30g+[/]"
+            if secs >= 7 * 86400:
+                return "  [bold #FFB000]🥇 7g+[/]"
+            if secs >= 86400:
+                return "  [bold #F7931A]🥈 24h+[/]"
+            if secs >= 3600:
+                return "  [bold #D27510]🥉 1h+[/]"
             return ""
         uptime_badge = _uptime_badge(s.uptime_sec) if (s and s.reachable) else ""
         # Block height live (mempool.space tip)
@@ -1247,7 +1248,7 @@ class HeaderBar(Static):
 
 class AlertsBar(Static):
     """⚠ Threshold alerts flash bar"""
-    state: reactive[Optional[BitaxeState]] = reactive(None)
+    state: reactive[BitaxeState | None] = reactive(None)
 
     def watch_state(self, s):
         if s is None:
@@ -1320,7 +1321,7 @@ class HelpModal(ModalScreen):
             "  [bold #F7931A]⚡ HASHRATE[/]   Live TH/s · sparkline · efficienza J/TH\n"
             "  [bold #FF4444]🌡 TEMP[/]       Gauge ASIC + VRM · ventola · autofan · margini\n"
             "  [bold #FFD700]⛏ MINING[/]     Share accettati/rifiutati · share/min · best diff\n"
-            "  [bold #C77DFF]🎰 LOTTERIA[/]   Probabilità blocco · ETA · stima reward\n"
+            "  [bold #C77DFF]🎯 BLOCK HUNT[/]   Probabilità blocco · ETA · stima reward\n"
             "  [bold #00D9FF]🔋 POTENZA[/]    Watt · tensione · margine · costo energia\n"
             "  [bold #00C896]🏊 POOL[/]       Primario/fallback · check tamper wallet · latenza\n"
             "  [bold #4DABF7]📡 SISTEMA[/]    RSSI WiFi · firmware · heap · uptime\n"
@@ -1331,7 +1332,7 @@ class HelpModal(ModalScreen):
             "  Rifiuto [metric-good]<1%[/] ottimo · [metric-warn]1-2%[/] ok · [metric-crit]>2%[/] degradato\n"
             "  Latenza [metric-good]<100ms[/] · [metric-warn]100-300[/] · [metric-crit]>300[/] degradata\n\n"
             "[bold #FFB000]🪙 NOTA SOLO MINING[/]\n\n"
-            "  Solo mining = payout a lotteria. Il reward del blocco (~3.125 BTC)\n"
+            "  Solo mining = payout statistico. Il reward del blocco (~3.125 BTC)\n"
             "  va al tuo wallet se vinci. Tieni il miner acceso 24/7 per massimizzare\n"
             "  la copertura dello spazio di ricerca SHA-256.\n\n"
             "[dim]Premi [bold]Esc[/] o [bold]?[/] o [bold]q[/] per chiudere.[/]",
@@ -1380,7 +1381,7 @@ class BitaxeCockpit(App):
         self._timer = None
         # sess.2214 v0.2 — webhook alerts + prev state per delta detection
         self.notifier = WebhookNotifier()
-        self._prev_state: Optional[BitaxeState] = None
+        self._prev_state: BitaxeState | None = None
         self._unreachable_streak: int = 0
 
     def compose(self) -> ComposeResult:
@@ -1422,7 +1423,7 @@ class BitaxeCockpit(App):
 
     async def fetch_and_update(self, full: bool = True):
         """Poll Bitaxe REST API + update panels. `full=False` updates only fast panels (adaptive rate)."""
-        state: Optional[BitaxeState] = None
+        state: BitaxeState | None = None
         try:
             t0 = time.perf_counter()
             r = await self.client.get(f"http://{self.host}/api/system/info")
@@ -1452,7 +1453,7 @@ class BitaxeCockpit(App):
         self._prev_state = state
         self.update_footer()
 
-    async def _maybe_alert(self, state: BitaxeState, prev: Optional[BitaxeState]):
+    async def _maybe_alert(self, state: BitaxeState, prev: BitaxeState | None):
         """Threshold-based alert firing. Cooldown per event in WebhookNotifier."""
         hn = state.hostname or self.host
         # Reachability — fire only after 3 consecutive failures (avoid blips)

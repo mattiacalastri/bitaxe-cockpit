@@ -39,7 +39,7 @@ Planned:
 First public release.
 
 ### Added
-- 8 live panels (Hashrate, Thermal, Mining, Lottery, Power, Pool & Wallet, System, Legend)
+- 8 live panels (Hashrate, Thermal, Mining, Block Hunt, Power, Pool & Wallet, System, Legend)
 - Animated ASCII BITAXE title with traveling wave gradient (4 Hz)
 - Live Bitcoin block height from `mempool.space`
 - Mini sparkline hashrate inline in KPI header line

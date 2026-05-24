@@ -34,7 +34,7 @@ A terminal-native flight deck for [Bitaxe](https://bitaxe.org) solo Bitcoin mine
 
 Your Bitaxe is a single ESP32 sliver hashing solo against the entire Bitcoin network. AxeOS's web UI tells you **what** is happening. This cockpit tells you **why it matters**.
 
-In one keystroke (`bitaxe-cockpit`) you get eight live panels — hashrate, thermal, share quality, lottery odds, energy cost, pool & wallet integrity, system health, and a context-aware legend — wrapped in an animated ASCII title, a refresh game with easter eggs, milestone badges every 1h/24h/7d/30d uptime, and the **only** Bitaxe-side tool that actively defends you against the vendor pre-config trap.
+In one keystroke (`bitaxe-cockpit`) you get eight live panels — hashrate, thermal, share quality, block-find probability, energy cost, pool & wallet integrity, system health, and a context-aware legend — wrapped in an animated ASCII title, a refresh game with easter eggs, milestone badges every 1h/24h/7d/30d uptime, and the **only** Bitaxe-side tool that actively defends you against the vendor pre-config trap.
 
 It runs in your terminal. It speaks Italian by default. It looks like a flight deck.
 
@@ -67,7 +67,7 @@ It runs in your terminal. It speaks Italian by default. It looks like a flight d
 
 ## 🖼 The Cockpit at a Glance
 
-![Bitaxe Cockpit live — Hashrate, Temperature, Mining, Lotteria panels](docs/screenshots/cockpit-live-polpo-theme.png)
+![Bitaxe Cockpit live — Hashrate, Temperature, Mining, Block Hunt panels](docs/screenshots/cockpit-live-polpo-theme.png)
 
 *Live capture on a Gamma 601 BM1370 · 1.23 TH/s · 63 °C · 18 W · 3 776 share · 10h uptime 🥉 · solo pool `homeminingitalia.org`. Polpo theme.*
 
@@ -77,7 +77,7 @@ What you're looking at, top to bottom:
 - **⚡ HASHRATE** (orange) — live GH/s + expected vs measured + perf% + J/TH efficiency + 60 s sparkline + min/avg/max + educational tooltip.
 - **🌡 TEMPERATURE** (red) — ASIC + VRM gauges side by side, dual sparklines, fan RPM + auto/manual, target temp, thermal margins both rails.
 - **⛏ MINING** (gold) — Share OK / KO with reject-reason cluster, share/min cadence, best diff (lifetime + session), pool difficulty, stratum response time.
-- **🎰 LOTTERIA** (magenta) — your share of total network hashrate, P(block)/day, expected ETA, lottery tickets/day equivalent, reward in BTC + EUR conversion.
+- **🎯 BLOCK HUNT** (magenta) — your share of total network hashrate, P(block)/day, expected ETA, block-find chances/day equivalent, reward in BTC + EUR conversion.
 
 Below this fold (scroll the terminal): **🔋 Alimentazione · 🏊 Pool & Wallet · 📡 Sistema · 📘 Legenda**. All eight panels live update on the same 5 s poll cycle (configurable). No redraws, no flicker, no jitter — Textual reactive watchers only repaint deltas.
 
@@ -118,7 +118,7 @@ If you bought your Bitaxe from anyone other than the official store: **run this 
 - **Bitcoin network awareness** — live block height from `mempool.space` polled every 60 s
 
 ### Solo-mining intelligence
-- **Lottery odds calculator** — your share of total network hashrate, P(block) per day, ETA in human-readable form, expected reward in BTC and EUR
+- **Block probability calculator** — your share of total network hashrate, P(block) per day, ETA in human-readable form, expected reward in BTC and EUR
 - **Pool & wallet integrity panel** — primary + fallback pool status, latency sparkline, stratumUser wallet check (anti vendor trap)
 - **Uptime milestone badges** 🥉 1h+ · 🥈 24h+ · 🥇 7d+ · 🏆 30d+ — because solo mining is a long game and small wins matter
 
@@ -224,7 +224,7 @@ The cockpit will now actively scream if the device's `stratumUser` ever drifts a
 | 1   | ⚡ Hashrate        | Orange   | Live TH/s, expected, perf %, J/TH efficiency, 60 s sparkline   |
 | 2   | 🌡 Temperatura     | Red      | ASIC + VRM gauges, dual sparkline, fan %, thermal margin       |
 | 3   | ⛏ Mining           | Gold     | Share OK / KO, reject-reason cluster, share/min, best diff     |
-| 4   | 🎰 Lotteria        | Magenta  | Network share, P(block)/day, ETA, expected reward (BTC + EUR)  |
+| 4   | 🎯 Block Hunt        | Magenta  | Network share, P(block)/day, ETA, expected reward (BTC + EUR)  |
 | 5   | 🔋 Alimentazione   | Cyan     | W gauge, V, A, freq, core V, headroom, €/day · €/month · €/year |
 | 6   | 🏊 Pool & Wallet   | Green    | Primary/fallback status, latency sparkline, **wallet integrity check** |
 | 7   | 📡 Sistema         | Blue     | Hostname, MAC, RSSI sparkline, firmware, free heap, uptime     |
@@ -289,7 +289,7 @@ The discovery layer scans `_http._tcp.local.` for 3 seconds and matches services
 | Install effort                  | `pip install -e .`     | Built-in             | Docker + 2 configs       | Bring your own      |
 | Resource footprint              | ~25 MB RAM, <1% CPU    | Negligible (device)  | 200+ MB RAM              | Varies              |
 | Live sparklines                 | ✅ all panels          | ❌                   | ✅ (configurable)         | If you build them   |
-| Solo lottery odds               | ✅                     | ❌                   | ❌ (calculator missing)   | Possible            |
+| Solo block-find probability               | ✅                     | ❌                   | ❌ (calculator missing)   | Possible            |
 | **Wallet integrity check**      | ✅ **active alerts**   | ❌ display only      | Possible w/ alertmanager | Possible            |
 | Energy cost in €/month·year     | ✅                     | ❌                   | Possible                 | Possible            |
 | Uptime gamification             | ✅ milestone badges    | ❌                   | ❌                       | ❌                  |
@@ -350,7 +350,7 @@ Yes — the UI is Italian-first but every label is short and self-explanatory. E
 **Q: Can I run this on a Raspberry Pi headless and view it over SSH?**
 Yes. Textual renders perfectly over SSH. Recommended: `tmux` + `mosh` for survivable sessions.
 
-**Q: How accurate is the lottery odds calculation?**
+**Q: How accurate is the block-find probability calculation?**
 It uses the standard solo-mining formula `P(block/day) = hashrate / network_hashrate × 144`, with network hashrate refreshed every 60 s from `mempool.space`. Accurate to within ~3% — the inherent variance of difficulty re-targeting dominates any model error.
 
 **Q: Why a TUI and not a web dashboard?**
@@ -393,7 +393,7 @@ This project follows the [Contributor Covenant 2.1](CODE_OF_CONDUCT.md). For sec
 - 🌐 English / Spanish / German / Portuguese localization
 - 📊 Prometheus metrics exporter
 - 🖥 Multi-device mode
-- 🧪 Tests for thermal / lottery math edge cases
+- 🧪 Tests for thermal / block-find math edge cases
 - 📚 Screenshots from your own Bitaxe (any model, any theme)
 
 Brand new to open source? Open an issue tagged `good-first-issue` and I'll walk you through it.
@@ -417,11 +417,11 @@ Polished sess.2214 (gamification + animated wave + Italian-first + OSS hardening
 **Standing on the shoulders of:**
 - **[@skot](https://github.com/skot/ESP-Miner)** — the legend who started ESP-Miner / AxeOS firmware
 - **[bitaxeorg](https://github.com/bitaxeorg)** — open hardware steward, Gamma 601 boards
-- **[Home Mining Italia](https://homeminingitalia.org)** — the solo pool that catches the lottery wins
+- **[Home Mining Italia](https://homeminingitalia.org)** — the solo pool that catches the block-find wins
 - **[Textual](https://textual.textualize.io)** by Textualize — the framework that makes terminals feel like apps
 - **[mempool.space](https://mempool.space)** — open, free, no-key block height API
 
-If solo mining is a lottery, this cockpit is the room where you sit and watch the wheel.
+If solo mining is a probabilistic hunt, this cockpit is the room where you sit and watch the entropy.
 Good luck out there.
 
 ```
