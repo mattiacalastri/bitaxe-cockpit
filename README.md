@@ -81,7 +81,7 @@ What you're looking at, top to bottom:
 
 Below this fold (scroll the terminal): **🔋 Alimentazione · 🏊 Pool & Wallet · 📡 Sistema · 📘 Legenda**. All eight panels live update on the same 5 s poll cycle (configurable). No redraws, no flicker, no jitter — Textual reactive watchers only repaint deltas.
 
-More captures (other themes, alert states, vendor-trap warning) in [`docs/screenshots/`](docs/screenshots/).
+More captures (other themes, alert states, vendor-trap warning) coming as the cockpit gets battle-tested by the community — PRs welcome under [`docs/screenshots/`](docs/screenshots/).
 
 ---
 

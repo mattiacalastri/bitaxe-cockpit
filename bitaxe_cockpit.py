@@ -1414,12 +1414,14 @@ class BitaxeCockpit(App):
         if self.paused:
             return
         self.tick_count += 1
-        # Adaptive rate sess.2214 — full refresh ogni tick base + selective per panel slow
-        # Panel fast (hashrate, thermal, mining, header, alerts): ogni tick
-        # Panel slow (lottery 30s, system 60s, pool 10s): condizionale
-        await self.fetch_and_update()
+        # Adaptive rate sess.2214 — fast panels every tick, slow panels every 3rd tick
+        # At default 5s interval: fast panels @ 5s, slow panels @ 15s
+        # Manual refresh (r key) always forces full=True regardless of tick_count
+        full = (self.tick_count % 3 == 0)
+        await self.fetch_and_update(full=full)
 
-    async def fetch_and_update(self):
+    async def fetch_and_update(self, full: bool = True):
+        """Poll Bitaxe REST API + update panels. `full=False` updates only fast panels (adaptive rate)."""
         state: Optional[BitaxeState] = None
         try:
             t0 = time.perf_counter()
@@ -1432,7 +1434,7 @@ class BitaxeCockpit(App):
             self.last_latency_ms = elapsed_ms
             if elapsed_ms < self.best_latency_ms:
                 self.best_latency_ms = elapsed_ms
-            self.update_all_panels(state)
+            self.update_all_panels(state, full=full)
             self.log_to_csv(state)
             ts = datetime.now().strftime("%H:%M:%S")
             pause_marker = " [PAUSA]" if self.paused else ""
@@ -1442,7 +1444,7 @@ class BitaxeCockpit(App):
             ts = datetime.now().strftime("%H:%M:%S")
             self.last_status = f"⚠ {ts} {type(e).__name__}"
             state = BitaxeState(reachable=False, last_update=datetime.now())
-            self.update_all_panels(state)
+            self.update_all_panels(state, full=True)  # offline always full so all panels show offline state
             self._unreachable_streak += 1
         # Webhook alerts (sess.2214 v0.2) — fire async post-update
         if self.notifier.is_configured() and state is not None:
