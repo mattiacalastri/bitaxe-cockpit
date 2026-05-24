@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Ruff lint
+        run: ruff check .
+      - name: Python import
+        run: python -c "import bitaxe_cockpit; print('import OK')"
+      - name: TCSS parse
+        run: |
+          python -c "from textual.css.parse import parse; \
+          css = open('bitaxe_cockpit.tcss').read(); \
+          rules = list(parse('test', css, ('test', 0))); \
+          assert len(rules) > 30; \
+          print(f'TCSS OK: {len(rules)} rules')"
+      - name: Pytest smoke
+        run: pytest tests/ -v
