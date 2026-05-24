@@ -21,14 +21,32 @@ python bitaxe_cockpit.py
 
 ## Testing without a real Bitaxe
 
-The cockpit hits `GET /api/system/info`. You can spin up a mock server:
+The cockpit hits `GET /api/system/info`. A canonical sanitized AxeOS payload
+lives at `tests/fixtures/api/system/info.json`. To run the cockpit against a
+mock server:
 
 ```bash
-python -m http.server 8080 --directory tests/fixtures &
-BITAXE_HOST=localhost:8080 python bitaxe_cockpit.py
+mkdir -p /tmp/bitaxe-mock/api/system
+cp tests/fixtures/api/system/info.json /tmp/bitaxe-mock/api/system/info
+cd /tmp/bitaxe-mock
+python -m http.server 8080 &
+BITAXE_HOST=localhost:8080 bitaxe-cockpit
 ```
 
-A reference JSON payload lives in `tests/fixtures/api/system/info` (TBD).
+Or in `tests/`, the `axeos_system_info` fixture (in `conftest.py`) loads the
+JSON and is available to all tests:
+
+```python
+def test_my_panel(axeos_system_info):
+    state = BitaxeState.from_api(axeos_system_info, response_ms=42.0)
+    # ... your assertions
+```
+
+Run the test suite:
+
+```bash
+pytest tests/ -v
+```
 
 ## Code style
 

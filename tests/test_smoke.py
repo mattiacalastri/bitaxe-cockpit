@@ -52,39 +52,40 @@ def test_wallet_prefix_empty_by_default(monkeypatch):
     assert bc.WALLET_PREFIX == ""
 
 
-def test_bitaxe_state_from_api():
-    """BitaxeState.from_api parses canonical AxeOS payload."""
-    sample = {
-        "hashRate": 1100.5,
-        "expectedHashrate": 1071,
-        "temp": 62.5,
-        "vrTemp": 70.0,
-        "fanspeed": 100,
-        "fanrpm": 5850,
-        "power": 17.9,
-        "voltage": 4968.75,
-        "current": 11234.375,
-        "frequency": 525,
-        "coreVoltage": 1150,
-        "sharesAccepted": 100,
-        "sharesRejected": 0,
-        "bestDiff": "1.38 G",
-        "stratumURL": "solo.homeminingitalia.org",
-        "stratumPort": 3333,
-        "stratumUser": "bc1qexample.worker",
-        "hostname": "test-miner",
-        "macAddr": "AA:BB:CC:DD:EE:FF",
-        "ssid": "TestNet",
-        "wifiRSSI": -50,
-        "uptimeSeconds": 3600,
-        "axeOSVersion": "v2.10.0",
-        "ASICModel": "BM1370",
-        "boardVersion": "601",
-    }
-    state = bc.BitaxeState.from_api(sample, 42.0)
-    assert state.hashrate_ghs == 1100.5
-    assert state.temp_asic == 62.5
+def test_bitaxe_state_from_api(axeos_system_info):
+    """BitaxeState.from_api parses canonical AxeOS payload from fixture."""
+    state = bc.BitaxeState.from_api(axeos_system_info, response_ms=42.0)
+    assert state.hashrate_ghs == 1148.32
+    assert state.expected_ghs == 1071
+    assert state.temp_asic == 62.25
     assert state.temp_vrm == 70.0
-    assert state.stratum_user == "bc1qexample.worker"
+    assert state.fan_perc == 100
+    assert state.power_w == 17.84
+    assert state.shares_accepted == 535
+    assert state.shares_rejected == 0
+    assert state.best_diff == "1.38 G"
+    assert state.stratum_user.startswith("bc1q")
+    assert state.hostname == "your-miner"
+    assert state.asic_model == "BM1370"
+    assert state.board_version == "601"
+    assert state.uptime_sec == 4164
     assert state.response_time_ms == 42.0
     assert state.reachable is True
+    assert state.using_fallback is False
+    assert state.autofanspeed == 1
+
+
+def test_bitaxe_state_unreachable():
+    """Default BitaxeState() = unreachable state for offline scenarios."""
+    state = bc.BitaxeState(reachable=False)
+    assert state.reachable is False
+    assert state.hashrate_ghs == 0.0
+    assert state.shares_accepted == 0
+
+
+def test_webhook_notifier_no_op_when_unconfigured(monkeypatch):
+    """WebhookNotifier silent when no env vars set."""
+    for var in ("BITAXE_TG_TOKEN", "BITAXE_TG_CHAT_ID", "BITAXE_DISCORD_URL", "BITAXE_WEBHOOK_URL"):
+        monkeypatch.delenv(var, raising=False)
+    n = bc.WebhookNotifier()
+    assert n.is_configured() is False
