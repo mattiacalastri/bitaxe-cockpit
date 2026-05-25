@@ -366,7 +366,7 @@ flowchart LR
         ALERT["📡 Webhook fanout<br/>Telegram · Discord · JSON"]
     end
     subgraph Cloud[" Internet (optional, opt-in) "]
-        MP[(("⛓ mempool.space<br/>block height"))]
+        MP[("⛓ mempool.space<br/>block height")]
         TG[/"📱 Telegram bot"/]
         DC[/"🎮 Discord webhook"/]
         WH[/"🌐 Your endpoint"/]
