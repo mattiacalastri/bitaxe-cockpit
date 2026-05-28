@@ -29,6 +29,29 @@ Screen {
 /* sess.2214 — VerticalScroll wrapper + grid-rows fisse (18 row per box)
  * Permette scroll verticale quando window troppo piccola per render full.
  * Box hanno altezza intrinseca sufficiente per big number + sparkline + gauge + metrics. */
+/* sess.2622 STEP A — Arc Gauge HERO ROW: 4 dial in linea orizzontale 1x4
+ * Sfrutta width terminale moderna (180+ col). Layout hero immediato. */
+#arc-grid {
+    layout: grid;
+    grid-size: 4 1;
+    grid-columns: 1fr 1fr 1fr 1fr;
+    grid-rows: auto;
+    grid-gutter: 0 1;
+    padding: 0 1;
+    height: auto;
+}
+
+/* sess.2622 STEP B — Story Mode panel narrative full-width sotto arc-grid */
+#story-mode-panel {
+    border: double #FFEE00;
+    background: #1a1908;
+    height: auto;
+    width: 100%;
+    padding: 1 2;
+    margin: 1 0;
+}
+
+/* Main grid 2x5 (drilldown panel testuali — toggle via key `d`) */
 #main-grid {
     layout: grid;
     grid-size: 2 5;
@@ -64,6 +87,32 @@ Screen {
 }
 
 /* ──── COLORI SEMANTICI PER PANEL ─────────────────────────────── */
+
+/* ──── ARC GAUGE PANELS (sess.2622) — bordo double per distinzione visiva ─── */
+
+/* HASHRATE ARC — Orange Bitcoin, bordo double */
+#hashrate-arc-panel {
+    border: double #F7931A;
+    background: #1a1208;
+}
+
+/* THERMAL ARC — Rosso, bordo double */
+#thermal-arc-panel {
+    border: double #FF4444;
+    background: #1a0808;
+}
+
+/* VRM ARC — Rosso più scuro (sub-componente Thermal), bordo double */
+#vrm-arc-panel {
+    border: double #C73030;
+    background: #1a0808;
+}
+
+/* POWER ARC — Cyan + Bitcoin Gold (palette mista), bordo double */
+#power-arc-panel {
+    border: double #00D9FF;
+    background: #08161a;
+}
 
 /* HASHRATE — Orange Bitcoin (sigillo principale) */
 #hashrate-panel {

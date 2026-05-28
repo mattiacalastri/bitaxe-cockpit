@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bitaxe-cockpit"
-version = "0.2.0"
-description = "A live TUI cockpit for Bitaxe solo Bitcoin miners — Italian-first, dark theme, gamified, animated ASCII title."
+version = "0.3.0"
+description = "A live TUI cockpit for Bitaxe solo Bitcoin miners — Italian-first, dark theme, gamified, animated ASCII title, Arc Gauge braille dial, Story Mode narrative for non-crypto-savvy."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"

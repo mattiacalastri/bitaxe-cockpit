@@ -14,6 +14,43 @@ Planned:
 - Mining diary log book (best diff break log, downtime events, restart history)
 - Localization to English / Spanish / German
 
+## [0.3.0] — 2026-05-28
+
+### Added — UX 3-layer redesign sess.2622
+
+- **Arc Gauge braille primitive** — 4 dial semicircolari ASCII via Unicode Braille
+  (2x4 sub-pixel per cella, range U+2800-28FF) per HASHRATE / ASIC TEMP / VRM / POWER.
+  Layout 1x4 inline orizzontale (`#arc-grid` TCSS), threshold cascade verde/amber/rosso
+  con lancetta Bresenham + arco fill proporzionale.
+- **Translator inline** sotto ogni ArcGauge — paragoni umani per non-crypto-savvy:
+  - HASHRATE: "Il chip prova {N} password al secondo · lavoro di ~{M} MacBook Pro M3"
+  - ASIC: "Il silicio è {tisana/doccia/tè/acqua bollente/pasta scolata}" (threshold cascade)
+  - VRM: "Il VRM converte 5V→0.4V — {fan al massimo/medio/tranquillo}"
+  - POWER: "Consuma come una {smartphone/lampadina LED/alogena} · Costo €{X}/mese · €{Y}/anno"
+- **Story Mode panel** — pannello narrativo italiano umano (zero jargon crypto):
+  uptime + tentativi totali in unità grandi ("123 quadrilioni di combinazioni"),
+  probabilità vittoria (1 su X, ETA secoli/millenni), earnings reali (vincita teorica
+  €296k vs costo elettricità €40/anno + EV statistico €0.012/anno), reality grounding
+  (78 Bitaxe singoli al mondo hanno trovato blocchi negli ultimi 2 anni), scala
+  mondiale tier (Hobby/Enthusiast/Pro/Industrial con auto-detect posizione).
+- **Toggle key `d`** — drilldown panel testuali on-demand (default VISIBILE,
+  premi per nascondere e lasciare solo Story Mode + dial).
+
+### Changed
+
+- **Dogfooding [polpo-tui-toolkit](https://github.com/mattiacalastri/polpo-tui-toolkit)** —
+  `polpo_arc_gauge.py` ora è shim che importa da sibling library invece di copia inline.
+  Backward compat preservato (`from polpo_arc_gauge import ArcGauge` continua a funzionare).
+  Pattern DRY cross-progetto per future TUI Polpo (m5-watcher, BTC cockpit, MRR, Health).
+- **Layout grid** — `#main-grid` 2x7 → 2x5 (drilldown row dedicate, ArcGauge in
+  `#arc-grid` separato 4x1 hero row).
+
+### Fixed
+
+- 25° substrato sintattico ≠ funzionale: 2 file `bitaxe_cockpit.py` divergenti
+  coesistevano (repo community vs `~/scripts/` production Mattia). Backport mirato
+  ricongiunge ArcGauge + StoryMode + binding `d`. Vedi cicatrice memory satellite.
+
 ## [0.2.0] — 2026-05-24
 
 ### Added

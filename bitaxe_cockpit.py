@@ -27,6 +27,13 @@ from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widgets import Static
 
+# sess.2622 — Arc Gauge braille sub-pixel primitive (sibling module, 0 deps shipped)
+try:
+    from polpo_arc_gauge import ArcGauge, PALETTE_POLPO, PALETTE_BITCOIN  # noqa: F401
+    _ARC_GAUGE_AVAILABLE = True
+except ImportError:
+    _ARC_GAUGE_AVAILABLE = False
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Configuration
 # ──────────────────────────────────────────────────────────────────────────────
@@ -973,6 +980,217 @@ class InsightPanel(Static):
         self.update(content)
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Arc Gauge Panels (sess.2622) — braille sub-pixel semicircular dial
+# Aggiunti SOPRA i panel testuali esistenti per dare immediata gestalt visiva.
+# ──────────────────────────────────────────────────────────────────────────────
+
+class HashrateArcPanel(Static):
+    """⚡ Hashrate ad arco — gauge semicircolare braille, target = expectedHashrate"""
+    state: reactive[BitaxeState | None] = reactive(None)
+
+    def __init__(self, **kw):
+        super().__init__(expand=True, **kw)
+        self.add_class("panel")
+
+    def watch_state(self, s):
+        if s is None or not _ARC_GAUGE_AVAILABLE:
+            return
+        hr_ths = s.hashrate_ghs / 1000
+        exp_ths = s.expected_ghs / 1000 if s.expected_ghs > 0 else 1.5
+        gauge = ArcGauge(
+            value=hr_ths,
+            min_val=0,
+            max_val=max(exp_ths * 1.3, 1.5),
+            label="HASHRATE LIVE",
+            unit=" TH/s",
+            low_threshold=exp_ths * 0.8,
+            high_threshold=exp_ths * 0.95,
+            width_px=46, height_px=22,
+        )
+        perf = (hr_ths / exp_ths * 100) if exp_ths > 0 else 0
+        perf_color = "#00C896" if perf > 95 else "#FFB000" if perf > 80 else "#FF4444"
+        content = (
+            f"{gauge.render()}\n\n"
+            f"  [dim]target[/] [bold]{exp_ths:.2f} TH/s[/]   "
+            f"[dim]perf[/] [bold {perf_color}]{perf:.1f}%[/]"
+        )
+        self.update(content)
+
+
+class ThermalArcPanel(Static):
+    """🌡️ ASIC + VRM ad arco — dual dial verticale braille"""
+    state: reactive[BitaxeState | None] = reactive(None)
+
+    def __init__(self, **kw):
+        super().__init__(expand=True, **kw)
+        self.add_class("panel")
+
+    def watch_state(self, s):
+        if s is None or not _ARC_GAUGE_AVAILABLE:
+            return
+        gauge_asic = ArcGauge(
+            value=s.temp_asic, min_val=20, max_val=85,
+            label="ASIC", unit="°C",
+            low_threshold=65, high_threshold=70,
+            width_px=46, height_px=22,
+        )
+        margin_asic = 70 - s.temp_asic
+        margin_vrm = 80 - s.temp_vrm
+        m_asic_color = "#00C896" if margin_asic > 8 else "#FFB000" if margin_asic > 3 else "#FF4444"
+        m_vrm_color = "#00C896" if margin_vrm > 10 else "#FFB000" if margin_vrm > 5 else "#FF4444"
+        content = (
+            f"{gauge_asic.render()}\n\n"
+            f"  [dim]VRM[/] [bold]{s.temp_vrm:.1f}°C[/]   "
+            f"[dim]margine ASIC[/] [bold {m_asic_color}]{margin_asic:.1f}°C[/]   "
+            f"[dim]VRM[/] [bold {m_vrm_color}]{margin_vrm:.1f}°C[/]"
+        )
+        self.update(content)
+
+
+class VRMArcPanel(Static):
+    """🔥 VRM ad arco — dial separato per Voltage Regulator Module"""
+    state: reactive[BitaxeState | None] = reactive(None)
+
+    def __init__(self, **kw):
+        super().__init__(expand=True, **kw)
+        self.add_class("panel")
+
+    def watch_state(self, s):
+        if s is None or not _ARC_GAUGE_AVAILABLE:
+            return
+        gauge = ArcGauge(
+            value=s.temp_vrm, min_val=20, max_val=95,
+            label="VRM (vero bottleneck)", unit="°C",
+            low_threshold=75, high_threshold=80,
+            width_px=46, height_px=22,
+        )
+        content = (
+            f"{gauge.render()}\n\n"
+            f"  [dim]fan[/] [bold #F7931A]{s.fan_perc}%[/] · {s.fan_rpm} RPM   "
+            f"[dim]target[/] [bold]{s.temp_target}°C[/]   "
+            f"[{'metric-good' if s.autofanspeed else 'metric-warn'}]"
+            f"{'AUTO' if s.autofanspeed else 'MAN'}[/]"
+        )
+        self.update(content)
+
+
+class PowerArcPanel(Static):
+    """🔋 Power ad arco — dial bitcoin gold + profilo OC"""
+    state: reactive[BitaxeState | None] = reactive(None)
+
+    def __init__(self, **kw):
+        super().__init__(expand=True, **kw)
+        self.add_class("panel")
+
+    def watch_state(self, s):
+        if s is None or not _ARC_GAUGE_AVAILABLE:
+            return
+        gauge = ArcGauge(
+            value=s.power_w, min_val=0, max_val=s.max_power_w if s.max_power_w > 0 else 40,
+            label="POWER LIVE", unit="W",
+            low_threshold=(s.max_power_w or 40) * 0.5,
+            high_threshold=(s.max_power_w or 40) * 0.85,
+            width_px=46, height_px=22,
+            palette=dict(PALETTE_BITCOIN),
+        )
+        eff = s.power_w / (s.hashrate_ghs / 1000) if s.hashrate_ghs > 0 else 0
+        eff_color = "#00C896" if eff < 15 else "#FFB000" if eff < 20 else "#FF4444"
+        content = (
+            f"{gauge.render()}\n\n"
+            f"  [dim]eff[/] [bold {eff_color}]{eff:.1f} J/TH[/]   "
+            f"[dim]freq[/] [bold #FFD700]{s.frequency_mhz} MHz[/]   "
+            f"[dim]core[/] [bold #FFD700]{s.core_voltage_mv} mV[/]"
+        )
+        self.update(content)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# StoryMode Panel (sess.2622 STEP B) — narrative italiano umano per non-crypto
+# Backport da ~/scripts/bitaxe_cockpit.py canonical. Traduce probabilità/earnings/
+# scala mondiale in linguaggio comprensibile a chiunque entri in casa Mattia.
+# ──────────────────────────────────────────────────────────────────────────────
+
+class StoryModePanel(Static):
+    """📖 Story Mode — racconta cosa sta succedendo in italiano umano
+
+    Tre sezioni narrative:
+    1. COSA STA SUCCEDENDO ORA (uptime + tentativi + probabilità)
+    2. EARNINGS reali (costo luce vs vincita teorica + EV statistico)
+    3. POSIZIONE nella scala mondiale (hobby/enthusiast/pro/industrial)
+    """
+    state: reactive[BitaxeState | None] = reactive(None)
+
+    def __init__(self, **kw):
+        super().__init__(expand=True, **kw)
+        self.add_class("panel")
+
+    def watch_state(self, s):
+        if s is None:
+            return
+        uptime_h = s.uptime_sec / 3600
+        uptime_d = uptime_h / 24
+        total_attempts = s.hashrate_ghs * 1e9 * s.uptime_sec
+        total_attempts_trillions = total_attempts / 1e12
+        network_hashrate_eh = 600  # EH/s globale 2026
+        share_network = (s.hashrate_ghs * 1e9) / (network_hashrate_eh * 1e18)
+        blocks_per_day = 144
+        prob_day_perc = share_network * blocks_per_day * 100
+        eta_years = 1 / (share_network * blocks_per_day * 365) if share_network > 0 else float('inf')
+        if eta_years < 100:
+            eta_str = f"{eta_years:.0f} anni"
+        elif eta_years < 10000:
+            eta_str = f"{eta_years/100:.1f} secoli"
+        elif eta_years < 1_000_000:
+            eta_str = f"{eta_years/1000:.1f} millenni"
+        else:
+            eta_str = f"{eta_years:.1e} anni"
+        lottery_scale = 1 / (prob_day_perc / 100) if prob_day_perc > 0 else float('inf')
+        block_reward_btc = 3.125
+        btc_eur = 95000  # stima 2026
+        reward_eur = block_reward_btc * btc_eur
+        cost_per_kwh_eur = 0.25
+        eur_per_day = s.power_w * 24 / 1000 * cost_per_kwh_eur
+        eur_per_year = eur_per_day * 365
+        ev_per_year_eur = (1 / eta_years) * reward_eur if eta_years > 0 else 0
+        # Scala globale
+        if s.hashrate_ghs < 100:
+            tier_msg = "🥉 Hobby (€100-300 single-chip) ← TU sei qui"
+        elif s.hashrate_ghs < 10_000:
+            tier_msg = "🥉 Hobby (€100-300 single-chip) ← TU sei qui (Gamma overclock)"
+        elif s.hashrate_ghs < 100_000:
+            tier_msg = "🥈 Enthusiast (€1-3k mini-rig) ← TU sei qui"
+        else:
+            tier_msg = "🥇 Pro/Industrial (€10k+ data center) ← TU sei qui"
+        if total_attempts_trillions > 1e6:
+            attempts_str = f"{total_attempts_trillions/1e6:.1f} quintilioni"
+        elif total_attempts_trillions > 1e3:
+            attempts_str = f"{total_attempts_trillions/1e3:.1f} quadrilioni"
+        else:
+            attempts_str = f"{total_attempts_trillions:.0f} trilioni"
+        content = (
+            "[bold #FFEE00]📖 STORY MODE — Cosa sta succedendo nel tuo silicio[/]\n"
+            "[dim italic #FFEE99]Spiegato in italiano umano · zero jargon crypto[/]\n\n"
+            f"[bold]⏱ Da {uptime_d:.1f} giorni[/] il tuo Bitaxe Gamma cerca un blocco Bitcoin.\n"
+            f"Ha provato [bold #F7931A]{attempts_str}[/] di combinazioni "
+            f"([bold]{s.shares_accepted:,}[/] tentativi validi inviati al pool).\n\n"
+            f"[bold]🎰 Probabilità vittoria oggi:[/] 1 su [bold #C77DFF]{lottery_scale:.2e}[/] · "
+            f"ETA statistico [bold #C77DFF]{eta_str}[/]\n"
+            f"[bold]💰 Se vinci:[/] [bold #FFD700]€{reward_eur:,.0f}[/] dritti nel tuo wallet "
+            f"(3.125 BTC × €{btc_eur:,})\n"
+            f"[bold]💸 Costo elettricità:[/] [bold #00D9FF]€{eur_per_day:.2f}/giorno[/] · "
+            f"[bold]€{eur_per_year:.0f}/anno[/]\n"
+            f"[bold]📊 Aspettativa probabilistica reale:[/] [dim]€{ev_per_year_eur:.3f}/anno[/]\n\n"
+            f"[bold]🎯 Reality check:[/] [bold #00C896]78 Bitaxe singoli al mondo[/] hanno "
+            f"davvero trovato blocchi negli ultimi 2 anni.\n"
+            f"La media non è il destino. Il dado è in moto da [bold]{uptime_d:.1f} giorni[/].\n\n"
+            f"[bold]🏆 Scala mondiale:[/]  {tier_msg}\n"
+            f"  [dim]🥈 Enthusiast mini-rig €1-3k (10-100 TH/s) · "
+            f"🥇 Pro home miner €10k+ · 🏆 Industrial data center (€millions)[/]"
+        )
+        self.update(content)
+
+
 class OLEDMirrorPanel(Static):
     """🖥️ Specchio display OLED Bitaxe — simula schermate AxeOS in tempo reale"""
     state: reactive[BitaxeState | None] = reactive(None)
@@ -1359,6 +1577,8 @@ class BitaxeCockpit(App):
         Binding("minus,kp_minus", "slower", "Slower", show=True),
         Binding("o", "open_browser", "Open URL", show=True),
         Binding("h,question_mark", "help", "Help", show=True),
+        # sess.2622 STEP D — toggle drilldown panel testuali (premi `d` per nascondere/mostrare)
+        Binding("d", "toggle_drilldown", "Drilldown", show=True),
     ]
 
     paused: reactive[bool] = reactive(False)
@@ -1388,7 +1608,17 @@ class BitaxeCockpit(App):
         # Header live HUD-style (2 righe: branding + KPI primari + tip rotante)
         yield HeaderBar(host=self.host, id="header-bar")
 
-        # Main grid 2x5 (4 row di panel · 8 widget · 1 alerts bar full-width)
+        # sess.2622 — Arc Gauge HERO ROW: 4 dial IN LINEA 1x4 (sfrutta width)
+        with VerticalScroll(id="arc-grid"):
+            yield HashrateArcPanel(id="hashrate-arc-panel")
+            yield ThermalArcPanel(id="thermal-arc-panel")
+            yield VRMArcPanel(id="vrm-arc-panel")
+            yield PowerArcPanel(id="power-arc-panel")
+
+        # sess.2622 STEP B — Story Mode narrative italiano umano per non-crypto
+        yield StoryModePanel(id="story-mode-panel")
+
+        # Main grid 2x5 (panel testuali drilldown — toggle via key `d`)
         # sess.2214 — VerticalScroll permette scroll quando window < grid height
         with VerticalScroll(id="main-grid"):
             yield HashratePanel(id="hashrate-panel")
@@ -1510,7 +1740,13 @@ class BitaxeCockpit(App):
         # - full=True: aggiorna tutti i panel (manual refresh + ogni N tick)
         # - full=False: aggiorna solo i panel FAST (header, hashrate, thermal, mining, alerts)
         # Panel SLOW (lottery, pool, system, legend) → solo ogni 6 tick (≈30s a 5s interval)
-        fast_panels = ["header-bar", "hashrate-panel", "thermal-panel", "mining-panel", "alerts-bar"]
+        fast_panels = [
+            "header-bar", "hashrate-panel", "thermal-panel", "mining-panel", "alerts-bar",
+            # sess.2622 — Arc Gauge panels FAST (refresh ogni tick come dial primari)
+            "hashrate-arc-panel", "thermal-arc-panel", "vrm-arc-panel", "power-arc-panel",
+            # sess.2622 STEP B — Story Mode narrative panel
+            "story-mode-panel",
+        ]
         slow_panels = ["lottery-panel", "power-panel", "pool-panel", "system-panel", "legend-panel"]
         targets = fast_panels + slow_panels if full else fast_panels
         for panel_id in targets:
@@ -1714,6 +1950,17 @@ class BitaxeCockpit(App):
     def action_help(self):
         self.notify("📘 Guida aperta · Esc o ? per chiudere", title="Guida", severity="information", timeout=2)
         self.push_screen(HelpModal())
+
+    # sess.2622 STEP D — toggle drilldown panel testuali on-demand
+    def action_toggle_drilldown(self):
+        try:
+            grid = self.query_one("#main-grid")
+            grid.display = not grid.display
+            state = "VISIBILE" if grid.display else "NASCOSTO"
+            self.notify(f"Drilldown panel testuali: {state}",
+                        title="Drilldown", severity="information", timeout=2)
+        except Exception as exc:
+            self.notify(f"Errore toggle: {exc}", severity="warning", timeout=3)
 
     async def on_unmount(self):
         await self.client.aclose()
