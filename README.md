@@ -21,14 +21,53 @@ A terminal-native flight deck for [Bitaxe](https://bitaxe.org) solo Bitcoin mine
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=flat-square)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
+[![Version v0.3.0](https://img.shields.io/badge/version-v0.3.0-F7931A?style=flat-square)](CHANGELOG.md)
 [![CI](https://img.shields.io/github/actions/workflow/status/mattiacalastri/bitaxe-cockpit/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/mattiacalastri/bitaxe-cockpit/actions)
 [![Built with Textual](https://img.shields.io/badge/built%20with-Textual-7B2CBF?style=flat-square)](https://textual.textualize.io)
 [![Bitaxe Compatible](https://img.shields.io/badge/Bitaxe-401%20%7C%20Gamma%20601%20%7C%20Ultra%20701-F7931A?style=flat-square)](https://bitaxe.org)
 [![Forged by Polpo OS](https://img.shields.io/badge/forged%20by-%F0%9F%90%99%20Polpo%20OS-1a1a2e?style=flat-square)](https://github.com/mattiacalastri)
+[![Dogfooding polpo-tui-toolkit](https://img.shields.io/badge/dogfooding-polpo--tui--toolkit-00C896?style=flat-square)](https://github.com/mattiacalastri/polpo-tui-toolkit)
 
 **[Demo](#-the-cockpit-at-a-glance)** · **[Quick Start](#-quick-start)** · **[Why](#-why-this-exists-the-vendor-trap)** · **[Features](#-features)** · **[FAQ](#-faq)** · **[Tip Jar](#-tip-jar-mine-a-share-to-the-author)**
 
 </div>
+
+---
+
+## 🆕 What's New in v0.3.0 — Arc Gauge braille + Story Mode
+
+![Bitaxe Cockpit v0.3.0 hero — cyberpunk octopus tentacles holding ASCII braille dial gauges, dark teal NOC dashboard aesthetic with Bitcoin orange accents](assets/hero.jpg)
+
+**Four Arc Gauge braille dials** inline 1×4 hero row + **Story Mode narrative panel** for non-crypto-savvy viewers. Made your Bitaxe finally readable by anyone who walks into your home.
+
+![Bitaxe Cockpit v0.3.0 live screenshot — 4 ArcGauge braille semicircular dials HASHRATE/ASIC/VRM/POWER inline + Story Mode panel with probability earnings scale tier](assets/screenshot_v030.png)
+
+### Arc Gauge braille primitive
+4 semicircular 180° dials rendered via Unicode Braille (U+2800–28FF, 2×4 sub-pixel per cell). Color cascade green/amber/red. Bresenham needle line. Zero deps shipped (pure stdlib bit-packing).
+
+### Translator inline (3-layer UX)
+Under each dial, a human-language line:
+- **HASHRATE** — *"Il chip prova 233.000.000.000 password al secondo · lavoro di ~233 MacBook Pro M3 in parallelo"*
+- **ASIC** — *"Il silicio è acqua quasi bollente"* (cascade tisana/doccia/tè/acqua bollente/pasta scolata)
+- **VRM** — *"Il VRM converte 5V→0.4V — fan al massimo, ventola urla"*
+- **POWER** — *"Consuma come una lampadina LED · Costo €3.30/mese · €40/anno"*
+
+### Story Mode panel narrative (Italian)
+A full-width yellow panel that tells what your Bitaxe is doing in plain Italian:
+- "Da 1.4 giorni cerca un blocco. Ha provato 123 quadrilioni di combinazioni."
+- "🎰 Probabilità vittoria oggi: 1 su 35.000.000 · ETA 3.500 anni"
+- "💰 Se vinci: €296.875 dritti nel wallet (3.125 BTC × €95.000)"
+- "💸 Costo elettricità: €0.11/giorno · €40/anno"
+- "🎯 Reality check: 78 Bitaxe singoli al mondo hanno trovato blocchi negli ultimi 2 anni"
+- "🏆 Tier: 🥉 Hobby (€100-300) ← TU sei qui"
+
+### Toggle key `d`
+Press `d` to hide/show the drilldown text panels — leaves only Story Mode + dials for a clean "explain it to your mum" mode.
+
+### Dogfooding [polpo-tui-toolkit](https://github.com/mattiacalastri/polpo-tui-toolkit)
+ArcGauge primitive now extracted to a standalone library. `polpo_arc_gauge.py` in this repo is a backward-compat shim that imports from the sibling library. Pattern DRY ready for `m5-watcher` / `BTC-cockpit` / `MRR-cockpit` / `Health-Coach` cross-project reuse.
+
+See [CHANGELOG.md](CHANGELOG.md#030--2026-05-28) for full sess.2622 release notes.
 
 ---
 
